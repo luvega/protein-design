@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+FROM nvidia/cuda:12.2.2-cudnn8-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
@@ -28,7 +28,9 @@ RUN python3 -m pip install --upgrade pip setuptools wheel
 # 先按官方 requirements 安装
 RUN pip3 install -r requirements.txt
 
-# 再按官方 Dockerfile 思路显式 pin JAX / jaxlib，避免版本漂移
+# 再显式 pin JAX / jaxlib，避免版本漂移。
+# jaxlib 的 cuda12/cudnn89 wheel 不应跑在 CUDA 11.x 或 base 镜像上；
+# 本镜像基线改为 CUDA 12.2 + cuDNN 8 runtime，和 wheel ABI 保持一致。
 RUN pip3 install --upgrade \
     jax==0.4.26 \
     jaxlib==0.4.26+cuda12.cudnn89 \
@@ -48,5 +50,17 @@ except AttributeError:
 PY
 
 RUN mkdir -p /opt/openmm_plugins_empty
+
+RUN cat > /usr/local/bin/af2multimer-check <<'EOF' && chmod +x /usr/local/bin/af2multimer-check
+#!/bin/bash
+set -euo pipefail
+PYTHONPATH=/opt/pyfix OPENMM_PLUGIN_DIR=/opt/openmm_plugins_empty python3 - <<'PY'
+import jax
+import jaxlib
+print("jax:", jax.__version__)
+print("jaxlib:", jaxlib.__version__)
+print("devices:", jax.devices())
+PY
+EOF
 
 CMD ["/bin/bash"]

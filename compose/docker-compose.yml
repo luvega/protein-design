@@ -57,6 +57,9 @@ services:
     gpus: all
 
   pd-af2multimer-gpu:
+    build:
+      context: ../images/pd-af2multimer-gpu
+      dockerfile: Dockerfile
     image: pd-af2multimer-gpu:fixed
     container_name: pd-af2multimer-gpu
     shm_size: "32gb"
@@ -135,6 +138,9 @@ services:
     gpus: all
     
   pd-rfpeptide-gpu:
+    build:
+      context: ../images/pd-rfpeptide-gpu
+      dockerfile: Dockerfile
     image: pd-rfpeptide-gpu:fixed
     container_name: pd-rfpeptide-gpu
     shm_size: "16gb"
