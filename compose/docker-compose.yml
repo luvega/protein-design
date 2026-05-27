@@ -1,0 +1,163 @@
+
+name: protein-design
+
+services:
+  pd-foundry-gpu:
+    build:
+      context: ../images/pd-foundry-gpu
+      dockerfile: Dockerfile
+    image: pd-foundry-gpu:latest
+    container_name: pd-foundry-gpu
+    shm_size: "16gb"
+    runtime: nvidia
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      FOUNDRY_CHECKPOINT_DIRS: /data/foundry_checkpoints
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ../data/inputs:/data/inputs
+      - ../data/outputs:/data/outputs
+      - ../data/foundry_checkpoints:/data/foundry_checkpoints
+      - ../scripts:/workspace/scripts
+    tty: true
+    stdin_open: true
+    working_dir: /workspace
+    command: bash
+    deploy: {}
+    profiles:
+      - foundry
+      - design
+      - rfd3
+      - mpnn
+    gpus: all
+
+  pd-bindcraft-gpu:
+    image: pd-bindcraft-gpu:installed
+    container_name: pd-bindcraft-gpu
+    shm_size: "16gb"
+    runtime: nvidia
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ../data/inputs:/data/inputs
+      - ../data/outputs:/data/outputs
+      - ../data/bindcraft_models:/opt/BindCraft/params
+      - ../data/licenses:/opt/licenses
+      - ../scripts:/workspace/scripts
+    tty: true
+    stdin_open: true
+    working_dir: /workspace
+    command: bash
+    deploy: {}
+    profiles:
+      - bindcraft
+    gpus: all
+
+  pd-af2multimer-gpu:
+    image: pd-af2multimer-gpu:fixed
+    container_name: pd-af2multimer-gpu
+    shm_size: "32gb"
+    runtime: nvidia
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      TF_FORCE_UNIFIED_MEMORY: "1"
+      XLA_PYTHON_CLIENT_MEM_FRACTION: "4.0"
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /opt/pyfix
+      OPENMM_PLUGIN_DIR: /opt/openmm_plugins_empty
+    volumes:
+      - ../data/inputs:/data/inputs
+      - ../data/outputs:/data/outputs
+      - ../data/alphafold_db:/data/alphafold_db
+      - ../scripts:/workspace/scripts
+    tty: true
+    stdin_open: true
+    working_dir: /workspace
+    command: bash
+    profiles:
+      - af2
+      - multimer
+    gpus: all
+
+  pd-rosetta-cpu-parallel:
+    build:
+      context: ../images/pd-rosetta-cpu-parallel
+      dockerfile: Dockerfile
+    image: pd-rosetta-cpu-parallel:latest
+    container_name: pd-rosetta-cpu-parallel
+    user: "1000:1000"
+    environment:
+      PYTHONUNBUFFERED: "1"
+      ROSETTA3_DB: /opt/rosetta_db
+    volumes:
+      - ../data/inputs:/data/inputs
+      - ../data/outputs:/data/outputs
+      - ../data/rosetta_db:/opt/rosetta_db
+      - ../data/licenses:/opt/licenses
+      - ../scripts:/workspace/scripts
+    tty: true
+    stdin_open: true
+    working_dir: /workspace
+    command: bash
+    profiles:
+      - rosetta
+      - post
+      - rosetta-parallel
+      
+  pd-pepmimic-gpu:
+    build:
+      context: ../images/pd-pepmimic-gpu
+      dockerfile: Dockerfile
+    image: pd-pepmimic-gpu:latest
+    container_name: pd-pepmimic-gpu
+    shm_size: "16gb"
+    runtime: nvidia
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ../data/inputs:/data/inputs
+      - ../data/outputs:/data/outputs
+      - ../data/pepmimic_checkpoints:/opt/PepMimic/checkpoints
+      - ../data/licenses:/opt/licenses
+      - ../scripts:/workspace/scripts
+    tty: true
+    stdin_open: true
+    working_dir: /workspace
+    command: bash
+    profiles:
+      - pepmimic
+    gpus: all
+    
+  pd-rfpeptide-gpu:
+    image: pd-rfpeptide-gpu:fixed
+    container_name: pd-rfpeptide-gpu
+    shm_size: "16gb"
+    runtime: nvidia
+    gpus: all
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ../data/inputs:/data/inputs
+      - ../data/outputs:/data/outputs
+      - ../data/rfpeptide_models:/opt/RFdiffusion/models
+      - ../scripts:/workspace/scripts
+    tty: true
+    stdin_open: true
+    working_dir: /workspace
+    command: bash
+    profiles:
+      - rfpeptide
+      - macrocycle
+      
+    
+networks:
+  default:
+    name: protein-design-net

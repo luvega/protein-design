@@ -1,0 +1,43 @@
+# Local shell/session noise
+.Rhistory
+*.swp
+*~
+
+# Large scientific data, checkpoints, model parameters, and outputs
+data/
+releases/
+images/pd-rosetta-cpu-parallel/rosetta_src/
+*.tar
+*.tar.gz
+*.tar.bz2
+*.tgz
+*.zip
+*.pt
+*.pth
+*.ckpt
+*.npz
+*.pdb
+*.cif
+*.fa
+*.fasta
+*.log
+*.sc
+*.pdf
+*.bak
+
+# Python/cache artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment/secrets
+.env
+.env.*
+!.env.example
+
+# OS/editor files
+.DS_Store
+.vscode/
+.idea/
