@@ -25,6 +25,10 @@ images/pd-rosetta-cpu-parallel/rosetta_src/
 *.pdf
 *.bak
 
+# Tracked lightweight example inputs
+!examples/**/*.fa
+!examples/**/*.fasta
+
 # Python/cache artifacts
 __pycache__/
 *.py[cod]

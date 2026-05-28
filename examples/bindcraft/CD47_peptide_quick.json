@@ -1,0 +1,13 @@
+{
+  "design_path": "/data/outputs/examples/bindcraft-cd47-peptide/",
+  "binder_name": "CD47_peptide_quick",
+  "starting_pdb": "/data/inputs/bindcraft/CD47/2JJSc.pdb",
+  "chains": "C",
+  "target_hotspot_residues": "",
+  "lengths": [7, 16],
+  "number_of_final_designs": 1,
+  "peptide_mode": true,
+  "settings_file": "peptide_default",
+  "peptide_filters": true,
+  "relax_binder_rmsd_threshold_for_peptides": true
+}

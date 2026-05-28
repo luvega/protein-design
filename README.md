@@ -91,6 +91,10 @@ mount, and output diagrams.
 每个服务的构建输入、运行时挂载和输出位置见
 [docs/service-flows.md](docs/service-flows.md)。
 
+Runnable task-level examples are available under [examples/](examples/).
+
+可运行的任务级示例位于 [examples/](examples/)。
+
 ## Docker Flow / Docker 流程
 
 ```mermaid
@@ -128,9 +132,11 @@ flowchart TD
 ## Runtime Mounts / 运行时挂载
 
 All Compose services mount `data/inputs`, `data/outputs`, and `scripts` into the
-container.
+container. The tracked `examples` directory is mounted read-only at
+`/workspace/examples`.
 
 所有 Compose 服务都会把 `data/inputs`、`data/outputs` 和 `scripts` 挂载到容器中。
+已跟踪的 `examples` 目录会以只读方式挂载到 `/workspace/examples`。
 
 Service-specific mounts / 服务专属挂载:
 
@@ -182,6 +188,15 @@ Run smoke checks / 运行烟测:
 
 ```bash
 ./scripts/smoke-test.sh all
+```
+
+Run workflow examples / 运行工作流示例:
+
+```bash
+./examples/foundry/run-mpnn-pdl1.sh
+./examples/af2multimer/run-check-or-full.sh
+./examples/rosetta/run-relax-pdl1.sh
+./examples/confidence/run-merge-srcr.sh
 ```
 
 Merge confidence JSON files into ranked CSV/XLSX tables /
