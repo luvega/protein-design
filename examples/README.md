@@ -30,3 +30,29 @@ Some scientific runs are intentionally small but still GPU-heavy. Use the smoke
 test first before starting full design jobs.
 
 部分科学流程即使示例规模较小也会占用 GPU。建议先运行烟测，再启动完整设计任务。
+
+## Parameter Pattern / 参数模式
+
+Most scripts use environment variables for simple customization. For example:
+
+大多数脚本用环境变量覆盖默认输入和输出。例如：
+
+```bash
+INPUT_PDB=/data/inputs/my_project/target.pdb \
+OUTPUT_DIR=/data/outputs/my_project/mpnn_run_001 \
+./examples/foundry/run-mpnn-pdl1.sh
+```
+
+The `/data/...` paths are paths inside the container. They map to this
+repository's `data/...` directories on the host.
+
+`/data/...` 是容器内路径，对应宿主机本仓库里的 `data/...` 目录。
+
+For a fuller Chinese explanation of Linux commands, shell scripts, parameters,
+and peptide design workflow choices, read:
+
+更详细的中文说明见：
+
+```text
+docs/undergrad-guide-zh.md
+```

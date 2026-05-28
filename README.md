@@ -91,6 +91,14 @@ mount, and output diagrams.
 每个服务的构建输入、运行时挂载和输出位置见
 [docs/service-flows.md](docs/service-flows.md)。
 
+For a beginner-friendly Chinese guide covering Linux basics, shell scripts,
+command parameters, and peptide design workflows, see
+[docs/undergrad-guide-zh.md](docs/undergrad-guide-zh.md).
+
+面向药学本科生的中文入门手册见
+[docs/undergrad-guide-zh.md](docs/undergrad-guide-zh.md)，其中包含 Linux 基础、
+`.sh` 脚本读法、命令参数和多肽生成/改造流程说明。
+
 Runnable task-level examples are available under [examples/](examples/).
 
 可运行的任务级示例位于 [examples/](examples/)。

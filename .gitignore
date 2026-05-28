@@ -1,5 +1,6 @@
 # Local shell/session noise
 .Rhistory
+.Trash/
 *.swp
 *~
 
