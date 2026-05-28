@@ -140,25 +140,32 @@ configuration files, confidence metrics, and ranked candidate tables.
 
 ![Method-level information flow](docs/assets/workflows/method-level-information-flow.png)
 
-This figure summarizes the conceptual data path from research question to
-candidate ranking. The key point is that structural hypotheses, sequence
-variants, database evidence, and confidence metrics remain explicit objects
-throughout the workflow rather than hidden intermediate state.
+The project logic is simple: use generative tools such as RFpeptide/RFdiffusion,
+RFD3/Foundry, BindCraft, and PepMimic to propose peptide or binder candidates;
+use ProteinMPNN/LigandMPNN to make sequences compatible with the proposed
+backbones or interfaces; use AF2 Multimer or AF3 to test whether the designed
+molecules form plausible complexes; use Rosetta to relax and score the physical
+model; then merge confidence and energy evidence into ranked candidates for
+manual inspection or experimental follow-up.
 
-该图概括了从研究问题到候选排序的概念性信息路径。重点是：结构假设、序列变体、
-数据库证据和置信度指标在整个流程中都以显式对象传递，而不是隐藏在中间状态中。
+项目逻辑可以概括为一条主线：先用 RFpeptide/RFdiffusion、RFD3/Foundry、
+BindCraft、PepMimic 等生成式工具提出多肽或结合体候选；再用
+ProteinMPNN/LigandMPNN 让序列适配骨架或界面；随后用 AF2 Multimer 或 AF3
+验证这些候选是否能形成合理复合物；再用 Rosetta 做物理层面的 relax 和打分；
+最后把置信度、能量和界面证据汇总成候选排序，用于人工检查或后续实验。
 
-### Tool Roles and Transferred Information / 工具角色与传递信息
+### Tool Methodology at a Glance / 工具方法定位速览
 
-| Docker image / 镜像 | Methodological role / 方法学角色 | Input information emphasis / 输入信息侧重 | Transformation focus / 转换重点 | Output information passed downstream / 下游传递信息 |
-| --- | --- | --- | --- | --- |
-| `pd-foundry-gpu` | Foundry/RFD3/ProteinMPNN/LigandMPNN design environment / 生成式设计与序列设计环境 | Target structures, contigs, chain topology, fixed residues, design constraints / 靶点结构、contig、链拓扑、固定残基、设计约束 | Backbone generation and sequence compatibility under geometric constraints / 在几何约束下生成骨架并匹配序列 | Candidate backbones, designed sequences, design metadata / 候选骨架、设计序列、设计元数据 |
-| `pd-bindcraft-gpu` | Binder and peptide-binder optimization / 结合蛋白或结合肽优化 | Target PDB, hotspot residues, chain definitions, run settings / 靶点 PDB、热点残基、链定义、运行配置 | Interface-aware sequence-structure co-optimization / 面向界面的序列-结构协同优化 | Binder structures, trajectories, sequence sets, interface scores / 结合体结构、轨迹、序列集合、界面评分 |
-| `pd-af2multimer-gpu` | AlphaFold 2 Multimer complex validation / AF2 Multimer 复合物验证 | FASTA chains, MSA/template database evidence, multimer preset / 多链 FASTA、MSA/模板数据库证据、multimer 配置 | Complex structure inference and interface confidence estimation / 复合物结构推断与界面可信度估计 | Ranked models, pLDDT, pTM, ipTM, PAE, interface diagnostics / 排序模型、pLDDT、pTM、ipTM、PAE、界面诊断 |
-| `pd-af3-gpu` | AlphaFold 3 validation for protein, peptide, and broader molecular inputs / AF3 结构验证 | AF3 JSON, model parameters, public databases, template date / AF3 JSON、模型权重、公共数据库、模板日期 | Generalized structure inference with JAX compilation cache / 利用 JAX 缓存进行更通用的结构推断 | CIF structures, ranking outputs, confidence JSON, run settings / CIF 结构、排序结果、置信度 JSON、运行参数 |
-| `pd-rosetta-cpu-parallel` | Rosetta physical refinement and scoring / Rosetta 物理优化与打分 | Candidate PDB/CIF, Rosetta database, optional constraints / 候选 PDB/CIF、Rosetta 数据库、可选约束 | Local relaxation, steric correction, energy and interface scoring / 局部 relax、空间冲突修正、能量与界面评分 | Relaxed structures, score files, filtered candidates / 优化结构、打分文件、过滤后的候选 |
-| `pd-pepmimic-gpu` | PepMimic motif and epitope mimicry workflow / PepMimic 模体和表位模拟 | Epitope geometry, reference motif, checkpoint assets / 表位几何、参考模体、checkpoint | Learning-based peptide mimic generation / 基于模型的多肽模拟生成 | Mimetic peptide candidates, structural hypotheses, scores / 模拟肽候选、结构假设、评分 |
-| `pd-rfpeptide-gpu` | RFpeptide/RFdiffusion macrocycle and constrained peptide generation / RFpeptide/RFdiffusion 大环与约束多肽生成 | Contig constraints, macrocycle settings, model checkpoints / contig 约束、大环设置、模型权重 | Diffusion-based constrained backbone generation / 基于扩散模型的约束骨架生成 | Cyclic or constrained peptide backbones, candidate designs / 环肽或约束多肽骨架、候选设计 |
+| Tool / 工具 | Methodological focus / 方法论侧重 | Used for / 在流程中的用途 |
+| --- | --- | --- |
+| RFD3/Foundry | Geometric backbone and complex hypotheses / 几何骨架和复合物假设 | Propose where a peptide or binder could sit before sequence design / 在序列设计前提出多肽或结合体可能的位置和形状 |
+| ProteinMPNN/LigandMPNN | Sequence compatibility with a fixed backbone or interface / 给定骨架或界面的序列适配 | Convert designed backbones into amino acid sequences / 把设计骨架转化为氨基酸序列 |
+| BindCraft | Iterative interface-centered binder design / 面向界面的迭代式 binder 设计 | Generate candidates around receptor hotspots / 围绕受体热点生成结合体候选 |
+| RFpeptide/RFdiffusion | Diffusion-based constrained peptide or macrocycle generation / 基于扩散模型的约束多肽或大环生成 | Explore diverse peptide backbones under topology constraints / 在拓扑约束下探索多样化多肽骨架 |
+| PepMimic | Motif and epitope mimicry / 模体和表位模拟 | Generate peptides that preserve key epitope geometry / 生成保留关键表位几何的模拟肽 |
+| AF2 Multimer | Learned complex prediction from FASTA chains / 基于 FASTA 链的复合物预测 | Triage whether designed chains form plausible interfaces / 初筛设计链是否形成合理界面 |
+| AF3 | JSON-based broader molecular structure validation / 基于 JSON 的更通用分子结构验证 | Cross-check or extend complex validation beyond the AF2 Multimer path / 交叉验证或扩展 AF2 Multimer 之外的结构验证 |
+| Rosetta | Physics-oriented relaxation, packing, and energy scoring / 物理取向的 relax、堆积和能量评分 | Remove candidates that fail local geometry or energy checks / 淘汰局部几何或能量不可靠的候选 |
 
 ### Per-Image Workflow Figures / 各镜像流程图
 
@@ -166,80 +173,123 @@ throughout the workflow rather than hidden intermediate state.
 
 ![Foundry/RFD3/MPNN workflow](docs/assets/workflows/pd-foundry-gpu-workflow.png)
 
-Input emphasis: target structures, contig definitions, motif/interface rules,
-and fixed residues. The image highlights backbone generation followed by
-MPNN-style sequence redesign, producing candidate structures and designed
-sequences for validation.
+This flow connects RFD3/Foundry-style backbone generation with
+ProteinMPNN/LigandMPNN sequence design. RFD3/Foundry focuses on geometric
+hypotheses: where the chain should be, how it should contact the target, and
+which motif or topology should be preserved. MPNN then asks a narrower question:
+given that backbone or interface, which amino acid sequence is compatible with
+it? The purpose is to turn a structural design idea into sequence-bearing
+candidates that can be tested by AF2/AF3 and refined by Rosetta.
 
-输入侧重靶点结构、contig 定义、模体/界面规则和固定残基。图中强调先生成骨架，
-再进行 MPNN 风格的序列改造，输出候选结构和设计序列用于后续验证。
+这条流程把 RFD3/Foundry 的骨架生成和 ProteinMPNN/LigandMPNN 的序列设计串起来。
+RFD3/Foundry 侧重几何假设：链应该放在哪里、怎样接触靶点、保留哪些模体或拓扑；
+MPNN 接着回答更具体的问题：在这个骨架或界面上，什么氨基酸序列更合适。这个流程的
+目的，是把一个结构设计想法变成带有明确序列的候选分子，再交给 AF2/AF3 验证、
+Rosetta 优化。
 
 #### `pd-bindcraft-gpu`
 
 ![BindCraft workflow](docs/assets/workflows/pd-bindcraft-gpu-workflow.png)
 
-Input emphasis: receptor structure, hotspot residues, chain definitions,
-binder length, and filtering settings. The image focuses on iterative
-interface-aware design, where structural trajectories and interface scores
-select candidate binders for validation.
+BindCraft is used when the main problem is interface design rather than a
+free-form peptide library. It starts from a receptor surface and hotspot
+residues, then searches for binder or peptide-binder structures that can make
+the desired contacts. Its method focus is iterative interface optimization:
+generate, evaluate the contact geometry, filter, and repeat. The resulting
+binders are not final answers; they are hypotheses that should be checked by
+AF2/AF3 for complex plausibility and by Rosetta for local packing and energy.
 
-输入侧重受体结构、热点残基、链定义、binder 长度和过滤设置。图中突出面向界面的
-迭代设计过程，通过结构轨迹和界面评分筛选候选结合体。
+BindCraft 适合用于“围绕受体界面设计结合体”的问题，而不是无目标地生成多肽库。它从
+受体表面和热点残基出发，搜索能够形成目标接触的 binder 或 peptide binder。方法论
+重点是迭代式界面优化：生成、检查接触几何、过滤，再继续优化。输出的结合体不是最终
+答案，而是需要继续交给 AF2/AF3 检查复合物合理性、再用 Rosetta 评估局部堆积和能量
+的结构假设。
 
 #### `pd-af2multimer-gpu`
 
 ![AlphaFold 2 Multimer workflow](docs/assets/workflows/pd-af2multimer-gpu-workflow.png)
 
-Input emphasis: multi-chain FASTA plus MSA/template database evidence. The
-image highlights complex inference and confidence outputs, especially pLDDT,
-pTM, ipTM, and PAE-like matrices used for interface triage.
+AF2 Multimer is the conservative validation branch for protein-peptide or
+protein-binder complexes represented as FASTA chains. It uses sequence and
+database evidence to infer whether chains can form a stable-looking complex,
+then reports confidence signals such as pLDDT, pTM, ipTM, and PAE. In the
+workflow it is mainly a triage tool: it helps reject candidates whose predicted
+interface is unstable, ambiguous, or far from the intended binding mode before
+spending more time on refinement.
 
-输入侧重多链 FASTA 以及 MSA/模板数据库证据。图中突出复合物推断和置信度输出，
-尤其是用于界面筛选的 pLDDT、pTM、ipTM 和 PAE 类矩阵。
+AF2 Multimer 是较保守的复合物验证分支，适合把靶蛋白和多肽/结合体表示为多链 FASTA
+后进行预测。它利用序列和数据库证据判断这些链是否可能形成稳定复合物，并输出 pLDDT、
+pTM、ipTM、PAE 等置信度信号。在本流程中它主要承担“初筛”作用：尽早排除界面不稳定、
+位置不确定或偏离预期结合模式的候选，避免后续浪费计算资源。
 
 #### `pd-af3-gpu`
 
 ![AlphaFold 3 workflow](docs/assets/workflows/pd-af3-gpu-workflow.png)
 
-Input emphasis: AF3 JSON molecule specifications, `af3.bin.zst`, public
-databases, template date, and JAX compilation cache. The image separates AF3
-from AF2 Multimer by showing JSON-native inputs and model/database mounts.
+AF3 is the newer validation branch and is kept separate from AF2 Multimer in
+this project. Instead of using the AF2 FASTA-only entry point, AF3 reads a JSON
+description of the molecular system and uses its own model file and public
+databases. Methodologically, AF3 is used when the validation target benefits
+from its broader molecular representation or when results should be compared
+against AF2 Multimer. Its outputs feed the same downstream decisions:
+confidence-based ranking, optional Rosetta refinement, and manual structural
+inspection.
 
-输入侧重 AF3 JSON 分子定义、`af3.bin.zst`、公共数据库、模板日期和 JAX 编译缓存。
-图中特意把 AF3 与 AF2 Multimer 区分开，强调 JSON 输入以及模型/数据库挂载。
+AF3 是更新的验证分支，在本项目中与 AF2 Multimer 完全分开。它不是走 AF2 的 FASTA
+入口，而是读取描述分子体系的 JSON，并使用独立的权重文件和公共数据库。方法论上，
+当验证对象需要 AF3 更宽的分子表示能力，或者需要与 AF2 Multimer 结果交叉比较时，
+就使用 AF3。它的输出仍然服务于同一个下游目标：按置信度排序、必要时做 Rosetta
+优化，并进行人工结构检查。
 
 #### `pd-rosetta-cpu-parallel`
 
 ![Rosetta workflow](docs/assets/workflows/pd-rosetta-cpu-parallel-workflow.png)
 
-Input emphasis: candidate PDB/CIF structures and the Rosetta database. The
-image highlights local physical refinement, steric correction, scoring, and
-filtering before final candidate triage.
+Rosetta is the physical refinement and scoring stage. AF2/AF3 tell us whether a
+complex is plausible under a learned model; Rosetta asks a different question:
+after local relaxation, does the structure still have reasonable packing,
+stereochemistry, interface energy, and clashes? This makes Rosetta a
+post-validation filter rather than a generator. It is used to remove candidates
+that look good by confidence metrics but fail basic physical or energetic
+checks.
 
-输入侧重候选 PDB/CIF 结构和 Rosetta 数据库。图中突出局部物理优化、空间冲突修正、
-打分和过滤，然后进入最终候选筛选。
+Rosetta 是物理优化和打分阶段。AF2/AF3 主要回答“模型认为这个复合物是否可信”，
+Rosetta 则换一个角度问：经过局部 relax 后，结构的堆积、立体化学、界面能量和空间
+冲突是否仍然合理。因此 Rosetta 不是生成器，而是验证之后的物理筛选器，用来淘汰那些
+置信度看起来不错但物理或能量层面不可靠的候选。
 
 #### `pd-pepmimic-gpu`
 
 ![PepMimic workflow](docs/assets/workflows/pd-pepmimic-gpu-workflow.png)
 
-Input emphasis: epitope geometry, reference motifs, and PepMimic checkpoints.
-The image focuses on motif-preserving mimetic peptide generation and structural
-plausibility screening before AF2/AF3 validation.
+PepMimic is used when the design goal is not simply “bind this target”, but
+“mimic this epitope or structural motif with a peptide-like molecule”. Its
+method focus is motif preservation: retain the key geometry or interaction
+pattern while proposing mimetic peptide candidates. The workflow therefore uses
+PepMimic upstream of AF2/AF3 and Rosetta: first generate motif-like candidates,
+then test whether they fold or bind plausibly, and finally refine or rank them.
 
-输入侧重表位几何、参考模体和 PepMimic checkpoint。图中强调保留模体几何的模拟肽
-生成，以及进入 AF2/AF3 前的结构合理性筛查。
+PepMimic 适合“模拟某个表位或结构模体”的任务，而不只是泛泛地寻找能结合靶点的多肽。
+它的方法论重点是模体保持：尽量保留关键几何关系或相互作用模式，同时提出模拟肽候选。
+因此它位于 AF2/AF3 和 Rosetta 的上游：先生成类似模体的候选，再验证它们是否能合理
+折叠或结合，最后再优化和排序。
 
 #### `pd-rfpeptide-gpu`
 
 ![RFpeptide workflow](docs/assets/workflows/pd-rfpeptide-gpu-workflow.png)
 
-Input emphasis: contig constraints, macrocycle topology, target context, and
-checkpoint assets. The image highlights diffusion-based constrained backbone
-sampling and selection by geometry, diversity, and constraint satisfaction.
+RFpeptide/RFdiffusion is the generative branch for constrained peptides,
+especially macrocycles or designs with contig and topology requirements. Its
+method focus is diffusion-based backbone sampling: generate many possible
+shapes under user-defined constraints, then keep the ones that satisfy geometry,
+diversity, and target-context requirements. These backbones usually need a
+second step, such as MPNN sequence design, followed by AF2/AF3 validation and
+Rosetta refinement.
 
-输入侧重 contig 约束、大环拓扑、靶点上下文和模型权重。图中突出基于扩散模型的
-约束骨架采样，并按几何合理性、多样性和约束满足程度筛选。
+RFpeptide/RFdiffusion 是约束多肽，尤其是大环肽或带 contig/拓扑要求设计的生成分支。
+它的方法论重点是基于扩散模型的骨架采样：在用户给定约束下产生许多可能形状，再筛选
+几何合理、多样性好、满足靶点上下文的骨架。这些骨架通常还需要第二步序列设计，
+例如接 MPNN，然后再进入 AF2/AF3 验证和 Rosetta 优化。
 
 See [docs/service-flows.md](docs/service-flows.md) for per-service build,
 mount, and output diagrams.
