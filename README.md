@@ -3,10 +3,10 @@
 Docker-based local workbench for protein design workflows on this machine.
 
 本仓库是这台机器上的蛋白设计本地工作台，主要用 Docker Compose 管理
-Foundry/RFD3、BindCraft、AlphaFold Multimer、Rosetta、PepMimic 和 RFpeptide
-等运行环境。
+Foundry/RFD3、BindCraft、AlphaFold Multimer、AlphaFold 3、Rosetta、PepMimic
+和 RFpeptide 等运行环境。
 
-Current version / 当前版本: `v0.1.0`
+Current version / 当前版本: `v0.2.0`
 
 Release notes / 版本说明: [CHANGELOG.md](CHANGELOG.md)
 
@@ -43,7 +43,10 @@ Not tracked in Git / Git 不跟踪内容:
 | --- | --- |
 | `data/inputs/` | input structures and workflow configuration / 输入结构和流程配置 |
 | `data/outputs/` | generated workflow outputs / 生成的设计结果 |
-| `data/alphafold_db/` | AlphaFold parameter/database assets / AlphaFold 参数和数据库 |
+| `data/alphafold_db/` | AlphaFold 2 Multimer parameter/database assets / AlphaFold 2 Multimer 参数和数据库 |
+| `data/alphafold3/models/` | AlphaFold 3 model file, including `af3.bin.zst` / AlphaFold 3 权重文件 |
+| `data/alphafold3/public_databases/` | AlphaFold 3 sequence/template databases / AlphaFold 3 序列和模板数据库 |
+| `data/alphafold3/jax_cache/` | AlphaFold 3 JAX compilation cache / AlphaFold 3 JAX 编译缓存 |
 | `data/bindcraft_models/` | BindCraft model parameters / BindCraft 模型参数 |
 | `data/foundry_checkpoints/` | Foundry/ProteinMPNN/LigandMPNN checkpoints / Foundry、ProteinMPNN、LigandMPNN 检查点 |
 | `data/pepmimic_checkpoints/` | PepMimic checkpoints / PepMimic 检查点 |
@@ -63,6 +66,7 @@ flowchart LR
         foundry["pd-foundry-gpu<br/>Foundry, RFD3, ProteinMPNN, LigandMPNN"]
         bindcraft["pd-bindcraft-gpu<br/>BindCraft binder design<br/>BindCraft 结合蛋白设计"]
         af2["pd-af2multimer-gpu<br/>AlphaFold Multimer validation<br/>AlphaFold Multimer 验证"]
+        af3["pd-af3-gpu<br/>AlphaFold 3 validation<br/>AlphaFold 3 验证"]
         pepmimic["pd-pepmimic-gpu<br/>PepMimic"]
         rfpeptide["pd-rfpeptide-gpu<br/>RFpeptide, RFdiffusion macrocycles<br/>RFpeptide 与大环设计"]
     end
@@ -75,11 +79,13 @@ flowchart LR
     inputs --> foundry
     inputs --> bindcraft
     inputs --> af2
+    inputs --> af3
     inputs --> pepmimic
     inputs --> rfpeptide
     foundry --> outputs
     bindcraft --> outputs
     af2 --> outputs
+    af3 --> outputs
     pepmimic --> outputs
     rfpeptide --> outputs
     outputs --> rosetta
@@ -94,6 +100,18 @@ mount, and output diagrams.
 
 每个服务的构建输入、运行时挂载和输出位置见
 [docs/service-flows.md](docs/service-flows.md)。
+
+For the local AlphaFold 3 image, model file layout, and run commands, see
+[docs/af3-local-workflow.md](docs/af3-local-workflow.md).
+
+本地 AlphaFold 3 镜像、权重文件位置和运行命令见
+[docs/af3-local-workflow.md](docs/af3-local-workflow.md)。
+
+Use `./scripts/fetch-af3-databases.sh start` to prepare AF3 databases with the
+official fetch script and project paths.
+
+可用 `./scripts/fetch-af3-databases.sh start` 按项目路径调用官方脚本准备 AF3
+数据库。
 
 For a beginner-friendly Chinese guide covering Linux basics, shell scripts,
 command parameters, and peptide design workflows, see
@@ -137,6 +155,7 @@ flowchart TD
 | `foundry`, `design`, `rfd3`, `mpnn` | `pd-foundry-gpu` | Foundry/RFD3/MPNN workflows / Foundry、RFD3、MPNN 流程 | yes / 是 |
 | `bindcraft` | `pd-bindcraft-gpu` | BindCraft binder design / BindCraft 结合蛋白设计 | yes / 是 |
 | `af2`, `multimer` | `pd-af2multimer-gpu` | AlphaFold Multimer validation / AlphaFold Multimer 验证 | yes / 是 |
+| `af3`, `validate` | `pd-af3-gpu` | AlphaFold 3 validation / AlphaFold 3 验证 | yes / 是 |
 | `rosetta`, `post`, `rosetta-parallel` | `pd-rosetta-cpu-parallel` | Rosetta relax/scoring/post-processing / Rosetta 优化、评分、后处理 | no / 否 |
 | `pepmimic` | `pd-pepmimic-gpu` | PepMimic workflows / PepMimic 流程 | yes / 是 |
 | `rfpeptide`, `macrocycle` | `pd-rfpeptide-gpu` | RFpeptide/RFdiffusion macrocycle workflows / RFpeptide 与 RFdiffusion 大环流程 | yes / 是 |
@@ -157,6 +176,7 @@ Service-specific mounts / 服务专属挂载:
 | `pd-foundry-gpu` | `data/foundry_checkpoints` |
 | `pd-bindcraft-gpu` | `data/bindcraft_models`, `data/licenses` |
 | `pd-af2multimer-gpu` | `data/alphafold_db` |
+| `pd-af3-gpu` | `data/alphafold3/models`, `data/alphafold3/public_databases`, `data/alphafold3/jax_cache` |
 | `pd-rosetta-cpu-parallel` | `data/rosetta_db`, `data/licenses` |
 | `pd-pepmimic-gpu` | `data/pepmimic_checkpoints`, `data/licenses` |
 | `pd-rfpeptide-gpu` | `data/rfpeptide_models` |
@@ -180,6 +200,7 @@ Build or refresh a service image / 构建或刷新服务镜像:
 ```bash
 docker compose -f compose/docker-compose.yml --profile foundry build pd-foundry-gpu
 docker compose -f compose/docker-compose.yml --profile af2 build pd-af2multimer-gpu
+docker build -t pd-af3-gpu:v3.0.2 -f data/src/alphafold3/docker/Dockerfile data/src/alphafold3
 docker compose -f compose/docker-compose.yml --profile rosetta build pd-rosetta-cpu-parallel
 docker compose -f compose/docker-compose.yml --profile pepmimic build pd-pepmimic-gpu
 docker compose -f compose/docker-compose.yml --profile rfpeptide build pd-rfpeptide-gpu
@@ -191,6 +212,7 @@ Open a service shell / 打开服务 shell:
 docker compose -f compose/docker-compose.yml --profile foundry run --rm pd-foundry-gpu
 docker compose -f compose/docker-compose.yml --profile bindcraft run --rm pd-bindcraft-gpu
 docker compose -f compose/docker-compose.yml --profile af2 run --rm pd-af2multimer-gpu
+docker compose -f compose/docker-compose.yml --profile af3 run --rm pd-af3-gpu
 docker compose -f compose/docker-compose.yml --profile rosetta run --rm pd-rosetta-cpu-parallel
 docker compose -f compose/docker-compose.yml --profile pepmimic run --rm pd-pepmimic-gpu
 docker compose -f compose/docker-compose.yml --profile rfpeptide run --rm pd-rfpeptide-gpu
@@ -207,6 +229,7 @@ Run workflow examples / 运行工作流示例:
 ```bash
 ./examples/foundry/run-mpnn-pdl1.sh
 ./examples/af2multimer/run-check-or-full.sh
+./examples/af3/run-check-or-full.sh
 ./examples/rosetta/run-relax-pdl1.sh
 ./examples/confidence/run-merge-srcr.sh
 ```
@@ -236,6 +259,14 @@ python3 scripts/merge_confidence_tables.py \
 - Use `pd-rfpeptide-gpu:fixed` for RFpeptide. The local `latest` tag is not the
   known-good runtime. / RFpeptide 使用 `pd-rfpeptide-gpu:fixed`，本地 `latest`
   不是已确认可用的运行环境。
+- AlphaFold 3 uses the independent `pd-af3-gpu:v3.0.2` image. It does not use
+  the AlphaFold 2 Multimer image or `data/alphafold_db`. / AlphaFold 3 使用独立
+  的 `pd-af3-gpu:v3.0.2` 镜像，不使用 AlphaFold 2 Multimer 镜像或
+  `data/alphafold_db`。
+- The AlphaFold 3 model file lives at `data/alphafold3/models/af3.bin.zst` and
+  is mounted into the container at `/root/models/af3.bin.zst`. / AlphaFold 3
+  权重文件位于 `data/alphafold3/models/af3.bin.zst`，容器内路径为
+  `/root/models/af3.bin.zst`。
 - Do not commit local model files or workflow outputs. Check `git status`
   before every commit. / 不要提交本地模型文件或工作流输出；每次提交前检查
   `git status`。

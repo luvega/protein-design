@@ -9,7 +9,7 @@
 - 多肽生成：例如使用 RFpeptide/RFdiffusion 生成环肽或结合肽候选结构。
 - 多肽改造：例如在给定骨架或复合物结构上，用 ProteinMPNN/LigandMPNN 改造序列。
 - 结合肽设计：例如用 BindCraft 针对受体表面生成 binder 或 peptide binder。
-- 结构验证：例如用 AlphaFold Multimer 检查候选多肽和靶蛋白复合物是否稳定。
+- 结构验证：例如用 AlphaFold Multimer 或 AlphaFold 3 检查候选多肽和靶蛋白复合物是否稳定。
 - 后处理和打分：例如用 Rosetta relax 优化结构，用 confidence table 汇总 pLDDT、pTM、ipTM、PAE 等指标。
 
 本项目不是一个网页软件。它更像一个“实验台”：你把输入文件放到 `data/inputs/`，用脚本启动对应工具，结果写到 `data/outputs/`，最后用表格脚本筛选候选分子。
@@ -29,6 +29,9 @@
 | `data/inputs/` | 输入结构、FASTA、JSON 配置等。 |
 | `data/outputs/` | 运行结果、结构文件、打分表等。 |
 | `data/*_models`、`data/*_checkpoints` | 模型参数和 checkpoint。不要随意移动。 |
+| `data/alphafold3/models/` | AlphaFold 3 权重文件目录，当前应包含 `af3.bin.zst`。 |
+| `data/alphafold3/public_databases/` | AlphaFold 3 数据库目录。完整运行 AF3 前需要准备。 |
+| `data/alphafold3/jax_cache/` | AlphaFold 3 的 JAX 编译缓存目录。 |
 | `.Trash/` | 本工作区的回收站。清理文件时先移动到这里，不直接删除。 |
 
 `data/` 下大多数内容不进入 Git，因为模型和输出文件通常很大。不要用 Git 管理实验结果，除非明确知道自己在做什么。
@@ -181,7 +184,7 @@ data/inputs/PDL1.pdb
 | 后缀 | 含义 | 常见用途 |
 | --- | --- | --- |
 | `.pdb` | 蛋白结构文件 | Rosetta relax、BindCraft 输入、结构查看 |
-| `.cif` | 结构文件，常用于预测结构 | Foundry/MPNN/AF2 输出 |
+| `.cif` | 结构文件，常用于预测结构 | Foundry/MPNN/AF2/AF3 输出 |
 | `.fasta`、`.fa` | 序列文件 | AlphaFold、MPNN 序列输出 |
 | `.json` | 配置或结果 | BindCraft 设置、confidence JSON |
 | `.csv` | 表格 | 候选排序、打分汇总 |
@@ -214,6 +217,7 @@ docker compose -f compose/docker-compose.yml --profile foundry run --rm pd-found
 | Foundry/RFD3/MPNN | `foundry` | `pd-foundry-gpu` |
 | BindCraft | `bindcraft` | `pd-bindcraft-gpu` |
 | AlphaFold Multimer | `af2` | `pd-af2multimer-gpu` |
+| AlphaFold 3 | `af3` | `pd-af3-gpu` |
 | Rosetta | `rosetta` | `pd-rosetta-cpu-parallel` |
 | PepMimic | `pepmimic` | `pd-pepmimic-gpu` |
 | RFpeptide/RFdiffusion | `rfpeptide` | `pd-rfpeptide-gpu` |
@@ -244,6 +248,7 @@ docker compose -f compose/docker-compose.yml --profile foundry run --rm pd-found
 ./scripts/smoke-test.sh foundry
 ./scripts/smoke-test.sh bindcraft
 ./scripts/smoke-test.sh af2
+./scripts/smoke-test.sh af3
 ./scripts/smoke-test.sh rosetta
 ./scripts/smoke-test.sh pepmimic
 ./scripts/smoke-test.sh rfpeptide
@@ -487,7 +492,94 @@ RUN_FULL=1 ./examples/af2multimer/run-check-or-full.sh
 - `pae`/`interface PAE`：链间相对位置是否可靠。
 - 是否有明显链间穿插、断裂、远离靶点等结构异常。
 
-### 9.2 Rosetta relax：结构放松
+### 9.2 AlphaFold 3：更通用的复合物验证
+
+脚本：
+
+```bash
+./examples/af3/run-check-or-full.sh
+```
+
+默认行为只检查 AF3 镜像、权重挂载和 JAX 运行环境，不跑完整预测：
+
+```bash
+./examples/af3/run-check-or-full.sh
+```
+
+完整预测前需要先准备 AF3 数据库。当前数据库目录放在机械硬盘上的项目目录中：
+
+```text
+data/alphafold3/public_databases/
+```
+
+本项目的准备脚本会调用官方 AlphaFold 3 源码中的
+`data/src/alphafold3/fetch_databases.sh`，只是额外处理后台运行、日志和路径：
+
+```bash
+./scripts/fetch-af3-databases.sh start
+```
+
+查看下载状态：
+
+```bash
+./scripts/fetch-af3-databases.sh status
+du -sh data/alphafold3/public_databases
+tail -f data/outputs/logs/af3-fetch-databases-*.log
+```
+
+如果之后加装 SSD，建议把整个 `/data/protein-design` 项目目录整体迁移到 SSD，
+不要只移动数据库目录。这样 `compose/docker-compose.yml` 里的相对挂载路径仍然有效。
+
+完整运行需要设置：
+
+```bash
+RUN_FULL=1 ./examples/af3/run-check-or-full.sh
+```
+
+默认变量：
+
+| 变量 | 默认值 | 含义 |
+| --- | --- | --- |
+| `JSON_PATH` | `/workspace/examples/af3/example_peptide.json` | AF3 输入 JSON。 |
+| `OUTPUT_DIR` | `/data/outputs/examples/af3-example` | 输出目录。 |
+| `MODEL_DIR` | `/root/models` | 容器内 AF3 权重目录。 |
+| `DB_DIR` | `/root/public_databases` | 容器内 AF3 数据库目录。 |
+| `JAX_CACHE_DIR` | `/data/alphafold3/jax_cache` | JAX 编译缓存目录。 |
+| `NUM_DIFFUSION_SAMPLES` | `1` | 示例中只生成 1 个 diffusion sample，正式任务可调高。 |
+| `NUM_RECYCLES` | `3` | 示例中只做 3 次 recycle，正式任务可调高。 |
+
+关键 AF3 参数：
+
+| 参数 | 含义 |
+| --- | --- |
+| `--json_path` | 输入 JSON，AF3 不使用 AF2 的多链 FASTA 入口。 |
+| `--model_dir` | 权重目录，当前容器内为 `/root/models`，其中包含 `af3.bin.zst`。 |
+| `--db_dir` | AF3 数据库目录，来自宿主机 `data/alphafold3/public_databases`。 |
+| `--output_dir` | 输出目录。 |
+| `--jax_compilation_cache_dir` | JAX 编译缓存，重复运行相似长度输入时可减少编译时间。 |
+| `--num_diffusion_samples` | 生成结构样本数。越大越慢。 |
+| `--num_recycles` | 模型 recycle 次数。越大通常越慢。 |
+
+AF3 与 AF2 Multimer 是两个独立服务：
+
+- AF3 镜像是 `pd-af3-gpu:v3.0.2`。
+- AF2 Multimer 镜像是 `pd-af2multimer-gpu:fixed`。
+- AF3 使用 `data/alphafold3/models/af3.bin.zst` 和 `data/alphafold3/public_databases`。
+- AF2 Multimer 使用 `data/alphafold_db`。
+- 不要把 AF3 权重放进 AF2 目录，也不要把 AF2 数据库当作 AF3 数据库使用。
+
+用自己的 AF3 输入时，建议先把 JSON 放到 `data/inputs/af3/`：
+
+```bash
+mkdir -p data/inputs/af3
+cp my_af3_input.json data/inputs/af3/
+JSON_PATH=/data/inputs/af3/my_af3_input.json \
+OUTPUT_DIR=/data/outputs/my_project/af3_run_001 \
+RUN_FULL=1 \
+./examples/af3/run-check-or-full.sh
+```
+
+### 9.3 Rosetta relax：结构放松
 
 脚本：
 
@@ -605,14 +697,14 @@ python3 scripts/merge_confidence_tables.py \
 2. 修改 BindCraft JSON：`starting_pdb`、`chains`、`target_hotspot_residues`、`lengths`。
 3. 小规模运行，先把 `number_of_final_designs` 设为 1 到 5。
 4. 检查输出 PDB、trajectory 和 CSV。
-5. 对候选做 AF2 Multimer 和 Rosetta relax。
+5. 对候选做 AF2 Multimer 或 AF3 复合物验证，再做 Rosetta relax。
 
 ### 11.3 生成环肽
 
 1. 从 RFpeptide 示例开始。
 2. 小规模调整 `NUM_DESIGNS`。
 3. 理解 `contigmap.contigs` 后再修改长度和链约束。
-4. 对候选进行结构质量和结合模式验证。
+4. 对候选进行结构质量和结合模式验证，可根据任务选择 AF2 Multimer 或 AF3。
 
 ## 12. 常见错误和处理
 
@@ -641,7 +733,9 @@ ls data/inputs
 
 ### 12.3 找不到模型权重
 
-例如缺少 `.pt`、`.ckpt`、`.npz`。这些文件在 `data/*_models` 或 `data/*_checkpoints` 下，不进入 Git。不要从 README 复制路径后随意改名。
+例如缺少 `.pt`、`.ckpt`、`.npz` 或 AF3 的 `af3.bin.zst`。这些文件在
+`data/*_models`、`data/*_checkpoints` 或 `data/alphafold3/models` 下，不进入
+Git。不要从 README 复制路径后随意改名。
 
 ### 12.4 GPU 不可用
 

@@ -14,6 +14,7 @@ Targets:
   foundry     Check Foundry Python environment
   bindcraft   Check BindCraft installation
   af2         Check AlphaFold Multimer JAX GPU runtime
+  af3         Check AlphaFold 3 image, model file, and JAX runtime
   rosetta     Check Rosetta database mount via Compose
   pepmimic    Check PepMimic PyTorch CUDA runtime
   rfpeptide   Check RFpeptide fixed image runtime
@@ -44,6 +45,11 @@ run_af2() {
     bash -lc 'af2multimer-check'
 }
 
+run_af3() {
+  timeout 120s "${COMPOSE[@]}" --profile af3 run --rm --no-deps pd-af3-gpu \
+    bash -lc 'test -f /root/models/af3.bin.zst && python -c "import jax, alphafold3; print(\"jax\", jax.__version__); print(\"devices\", jax.devices()); print(\"alphafold3 ok\")"'
+}
+
 run_rosetta() {
   "${COMPOSE[@]}" --profile rosetta run --rm --no-deps pd-rosetta-cpu-parallel \
     bash -lc 'test -f /opt/rosetta_db/scoring/weights/ref2015.wts && echo "rosetta db ok"'
@@ -66,6 +72,7 @@ case "$target" in
   foundry) run_foundry ;;
   bindcraft) run_bindcraft ;;
   af2) run_af2 ;;
+  af3) run_af3 ;;
   rosetta) run_rosetta ;;
   pepmimic) run_pepmimic ;;
   rfpeptide) run_rfpeptide ;;
@@ -75,6 +82,7 @@ case "$target" in
     run_foundry
     run_bindcraft
     run_af2
+    run_af3
     run_rosetta
     run_pepmimic
     run_rfpeptide

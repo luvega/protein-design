@@ -1,0 +1,14 @@
+{
+  "name": "example_peptide",
+  "sequences": [
+    {
+      "protein": {
+        "id": "A",
+        "sequence": "GIGAVLKVLTTGLPALISWIKRKRQQ"
+      }
+    }
+  ],
+  "modelSeeds": [1],
+  "dialect": "alphafold3",
+  "version": 1
+}

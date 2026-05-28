@@ -21,6 +21,7 @@ container, reads inputs from `data/inputs`, and writes outputs under
 | Foundry MPNN | `examples/foundry/run-mpnn-pdl1.sh` | Runs one ProteinMPNN batch on `data/inputs/PDL1.pdb`. |
 | BindCraft | `examples/bindcraft/run-cd47-peptide.sh` | Runs the CD47 peptide binder example with a small tracked settings file. |
 | AF2 Multimer | `examples/af2multimer/run-check-or-full.sh` | Checks JAX GPU by default; full AlphaFold run is gated by `RUN_FULL=1`. |
+| AF3 | `examples/af3/run-check-or-full.sh` | Checks the independent AlphaFold 3 image and model mount; full runs are gated by `RUN_FULL=1`. |
 | Rosetta | `examples/rosetta/run-relax-pdl1.sh` | Runs one Rosetta relax trajectory on `data/inputs/PDL1.pdb`. |
 | PepMimic | `examples/pepmimic/run-cd38-example.sh` | Runs PepMimic on its bundled CD38 example data and mounted checkpoint. |
 | RFpeptide | `examples/rfpeptide/run-macrocycle-smoke.sh` | Runs a one-design RFdiffusion cyclic peptide example. |
@@ -47,6 +48,16 @@ The `/data/...` paths are paths inside the container. They map to this
 repository's `data/...` directories on the host.
 
 `/data/...` 是容器内路径，对应宿主机本仓库里的 `data/...` 目录。
+
+AlphaFold 3 uses a separate image and asset layout from AlphaFold 2 Multimer.
+Its model file is mounted from `data/alphafold3/models/af3.bin.zst` to
+`/root/models/af3.bin.zst`, and databases should be placed under
+`data/alphafold3/public_databases`.
+
+AlphaFold 3 与 AlphaFold 2 Multimer 使用不同镜像和资源目录。AF3 权重文件从
+`data/alphafold3/models/af3.bin.zst` 挂载到容器内
+`/root/models/af3.bin.zst`，数据库放在
+`data/alphafold3/public_databases`。
 
 For a fuller Chinese explanation of Linux commands, shell scripts, parameters,
 and peptide design workflow choices, read:

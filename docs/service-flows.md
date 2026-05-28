@@ -64,6 +64,39 @@ flowchart LR
     shell --> outputs
 ```
 
+## AlphaFold 3
+
+```mermaid
+flowchart LR
+    source["data/src/alphafold3<br/>official AlphaFold 3 v3.0.2 source"]
+    wheel["data/src/alphafold3/wheelhouse<br/>local nvidia-cublas-cu12 wheel"]
+    image["pd-af3-gpu:v3.0.2"]
+    models["data/alphafold3/models<br/>af3.bin.zst"]
+    db["data/alphafold3/public_databases"]
+    cache["data/alphafold3/jax_cache"]
+    inputs["data/inputs and examples/af3"]
+    shell["Compose profiles: af3, validate"]
+    outputs["data/outputs"]
+
+    source --> image
+    wheel --> image
+    image --> shell
+    models --> shell
+    db --> shell
+    cache --> shell
+    inputs --> shell
+    shell --> outputs
+```
+
+AlphaFold 3 is independent from AlphaFold 2 Multimer in this project. The
+`pd-af3-gpu:v3.0.2` image is built from the official AlphaFold 3 source under
+`data/src/alphafold3`; it does not use `pd-af2multimer-gpu`, the AlphaFold 2
+Multimer Dockerfile, or `data/alphafold_db`.
+
+本项目中 AlphaFold 3 与 AlphaFold 2 Multimer 相互独立。`pd-af3-gpu:v3.0.2`
+镜像来自 `data/src/alphafold3` 下的官方 AlphaFold 3 源码，不使用
+`pd-af2multimer-gpu`、AlphaFold 2 Multimer Dockerfile 或 `data/alphafold_db`。
+
 ## Rosetta CPU Parallel
 
 ```mermaid
