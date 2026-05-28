@@ -1,27 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import argparse
 import json
 from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# ========= 可修改参数 =========
-ROOT_DIR = "/data/outputs/AAAWZY/0326-gamma-Lmpnn-rf3"
-OUT_CSV = "summarize/final_merged_confidence_table.csv"
-OUT_XLSX = "summarize/final_merged_confidence_table.xlsx"
+DEFAULT_ROOT_DIR = "/data/outputs/AAAWZY/0326-gamma-Lmpnn-rf3"
+DEFAULT_OUT_CSV = "summarize/final_merged_confidence_table.csv"
+DEFAULT_OUT_XLSX = "summarize/final_merged_confidence_table.xlsx"
+DEFAULT_SORT_BY = ["ranking_score", "overall_plddt", "mean_atom_plddt"]
+DEFAULT_ASCENDING = [False, False, False]
+DEFAULT_LOW_THRESHOLDS = [0.7, 0.5]
+DEFAULT_HIGH_THRESHOLDS = [0.8, 0.9]
 
-# 是否保留一级目录本身的 ROOT 结果
-INCLUDE_ROOT_LEVEL = True
 
-# 最终排序规则
-SORT_BY = ["ranking_score", "overall_plddt", "mean_atom_plddt"]
-ASCENDING = [False, False, False]
-
-# atom pLDDT 阈值
-LOW_THRESHOLDS = [0.7, 0.5]
-HIGH_THRESHOLDS = [0.8, 0.9]
-# ===========================
+def threshold_suffix(threshold):
+    return f"{threshold:g}".replace(".", "_")
 
 
 def load_json(path: Path):
@@ -71,7 +67,7 @@ def summarize_summary_json(json_path: Path, root_dir: Path):
     }
 
 
-def summarize_atom_conf_json(json_path: Path, root_dir: Path):
+def summarize_atom_conf_json(json_path: Path, root_dir: Path, low_thresholds, high_thresholds):
     data = load_json(json_path)
     group_folder, sample_folder, rel_path = parse_location(json_path, root_dir)
 
@@ -112,11 +108,13 @@ def summarize_atom_conf_json(json_path: Path, root_dir: Path):
         "p90_atom_plddt": float(np.quantile(atom_plddts, 0.90)),
     }
 
-    for t in HIGH_THRESHOLDS:
-        row[f"frac_atom_plddt_ge_{str(t).replace('.', '_')}"] = float(np.mean(atom_plddts >= t))
-    for t in LOW_THRESHOLDS:
-        row[f"frac_atom_plddt_lt_{str(t).replace('.', '_')}"] = float(np.mean(atom_plddts < t))
-        row[f"longest_run_atom_plddt_lt_{str(t).replace('.', '_')}"] = int(longest_run(atom_plddts < t))
+    for t in high_thresholds:
+        suffix = threshold_suffix(t)
+        row[f"frac_atom_plddt_ge_{suffix}"] = float(np.mean(atom_plddts >= t))
+    for t in low_thresholds:
+        suffix = threshold_suffix(t)
+        row[f"frac_atom_plddt_lt_{suffix}"] = float(np.mean(atom_plddts < t))
+        row[f"longest_run_atom_plddt_lt_{suffix}"] = int(longest_run(atom_plddts < t))
 
     for chain in sorted(set(atom_chain_ids.tolist())):
         mask = atom_chain_ids == chain
@@ -128,8 +126,9 @@ def summarize_atom_conf_json(json_path: Path, root_dir: Path):
         row[f"median_atom_plddt_chain_{cname}"] = float(np.median(vals))
         row[f"min_atom_plddt_chain_{cname}"] = float(np.min(vals))
         row[f"max_atom_plddt_chain_{cname}"] = float(np.max(vals))
-        row[f"frac_atom_plddt_lt_0_7_chain_{cname}"] = float(np.mean(vals < 0.7))
-        row[f"frac_atom_plddt_lt_0_5_chain_{cname}"] = float(np.mean(vals < 0.5))
+        for t in low_thresholds:
+            suffix = threshold_suffix(t)
+            row[f"frac_atom_plddt_lt_{suffix}_chain_{cname}"] = float(np.mean(vals < t))
 
     return row
 
@@ -144,8 +143,113 @@ def is_sample_level(path: Path, root_dir: Path):
     return len(rel_parts) >= 3
 
 
+def parse_csv_floats(value):
+    try:
+        return [float(item.strip()) for item in value.split(",") if item.strip()]
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"invalid comma-separated float list: {value}") from exc
+
+
+def parse_csv_strings(value):
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def parse_csv_bools(value):
+    bools = []
+    for item in parse_csv_strings(value):
+        normalized = item.lower()
+        if normalized in {"1", "true", "yes", "asc", "ascending"}:
+            bools.append(True)
+        elif normalized in {"0", "false", "no", "desc", "descending"}:
+            bools.append(False)
+        else:
+            raise argparse.ArgumentTypeError(f"invalid sort direction: {item}")
+    return bools
+
+
+def resolve_output_path(root_dir: Path, output_path: str):
+    path = Path(output_path).expanduser()
+    if path.is_absolute():
+        return path
+    return root_dir / path
+
+
+def validate_thresholds(label, thresholds):
+    if not thresholds:
+        raise argparse.ArgumentTypeError(f"{label} must include at least one threshold")
+    invalid = [t for t in thresholds if t < 0 or t > 1]
+    if invalid:
+        raise argparse.ArgumentTypeError(
+            f"{label} values must be between 0 and 1: {','.join(map(str, invalid))}"
+        )
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(
+        description="Merge *_summary_confidences.json and *_confidences.json files into ranked tables."
+    )
+    parser.add_argument(
+        "--root-dir",
+        default=DEFAULT_ROOT_DIR,
+        help=f"Directory to scan. Default: {DEFAULT_ROOT_DIR}",
+    )
+    parser.add_argument(
+        "--out-csv",
+        default=DEFAULT_OUT_CSV,
+        help=f"CSV output path. Relative paths are resolved under --root-dir. Default: {DEFAULT_OUT_CSV}",
+    )
+    parser.add_argument(
+        "--out-xlsx",
+        default=DEFAULT_OUT_XLSX,
+        help=f"XLSX output path. Relative paths are resolved under --root-dir. Default: {DEFAULT_OUT_XLSX}",
+    )
+    parser.add_argument(
+        "--no-xlsx",
+        action="store_true",
+        help="Skip XLSX output and write CSV only.",
+    )
+    parser.add_argument(
+        "--exclude-root-level",
+        action="store_true",
+        help="Skip files directly under each group folder.",
+    )
+    parser.add_argument(
+        "--sort-by",
+        type=parse_csv_strings,
+        default=DEFAULT_SORT_BY,
+        help="Comma-separated sort columns. Missing columns are ignored.",
+    )
+    parser.add_argument(
+        "--ascending",
+        type=parse_csv_bools,
+        default=DEFAULT_ASCENDING,
+        help="Comma-separated sort directions matching --sort-by. Use true/false or asc/desc.",
+    )
+    parser.add_argument(
+        "--low-thresholds",
+        type=parse_csv_floats,
+        default=DEFAULT_LOW_THRESHOLDS,
+        help="Comma-separated atom pLDDT low thresholds. Default: 0.7,0.5",
+    )
+    parser.add_argument(
+        "--high-thresholds",
+        type=parse_csv_floats,
+        default=DEFAULT_HIGH_THRESHOLDS,
+        help="Comma-separated atom pLDDT high thresholds. Default: 0.8,0.9",
+    )
+    return parser
+
+
 def main():
-    root_dir = Path(ROOT_DIR)
+    parser = build_parser()
+    args = parser.parse_args()
+    try:
+        validate_thresholds("--low-thresholds", args.low_thresholds)
+        validate_thresholds("--high-thresholds", args.high_thresholds)
+    except argparse.ArgumentTypeError as exc:
+        parser.error(str(exc))
+
+    root_dir = Path(args.root_dir).expanduser()
     if not root_dir.exists():
         raise FileNotFoundError(f"目录不存在: {root_dir}")
 
@@ -160,7 +264,7 @@ def main():
 
     summary_rows = []
     for path in summary_files:
-        if (is_root_level(path, root_dir) and not INCLUDE_ROOT_LEVEL):
+        if is_root_level(path, root_dir) and args.exclude_root_level:
             continue
         if is_root_level(path, root_dir) or is_sample_level(path, root_dir):
             try:
@@ -170,11 +274,13 @@ def main():
 
     atom_rows = []
     for path in atom_files:
-        if (is_root_level(path, root_dir) and not INCLUDE_ROOT_LEVEL):
+        if is_root_level(path, root_dir) and args.exclude_root_level:
             continue
         if is_root_level(path, root_dir) or is_sample_level(path, root_dir):
             try:
-                atom_rows.append(summarize_atom_conf_json(path, root_dir))
+                atom_rows.append(
+                    summarize_atom_conf_json(path, root_dir, args.low_thresholds, args.high_thresholds)
+                )
             except Exception as e:
                 print(f"[跳过 atom] {path} | {e}")
 
@@ -230,21 +336,27 @@ def main():
     remaining_cols = [c for c in df_final.columns if c not in existing_preferred]
     df_final = df_final[existing_preferred + remaining_cols]
 
-    valid_sort_cols = [c for c in SORT_BY if c in df_final.columns]
+    valid_sort_cols = [c for c in args.sort_by if c in df_final.columns]
     if valid_sort_cols:
-        asc = ASCENDING[:len(valid_sort_cols)]
+        asc = args.ascending[:len(valid_sort_cols)]
+        if len(asc) < len(valid_sort_cols):
+            asc.extend([False] * (len(valid_sort_cols) - len(asc)))
         df_final = df_final.sort_values(by=valid_sort_cols, ascending=asc, na_position="last")
 
-    out_csv = root_dir / OUT_CSV
+    out_csv = resolve_output_path(root_dir, args.out_csv)
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
     df_final.to_csv(out_csv, index=False, encoding="utf-8-sig")
 
-    out_xlsx = root_dir / OUT_XLSX
-    try:
-        df_final.to_excel(out_xlsx, index=False)
-        xlsx_ok = True
-    except Exception as e:
-        xlsx_ok = False
-        print(f"[提示] xlsx 输出失败，仅保留 csv: {e}")
+    xlsx_ok = False
+    out_xlsx = None
+    if not args.no_xlsx:
+        out_xlsx = resolve_output_path(root_dir, args.out_xlsx)
+        out_xlsx.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            df_final.to_excel(out_xlsx, index=False)
+            xlsx_ok = True
+        except Exception as e:
+            print(f"[提示] xlsx 输出失败，仅保留 csv: {e}")
 
     print(f"总记录数: {len(df_final)}")
     print(f"CSV 已保存: {out_csv}")

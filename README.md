@@ -2,65 +2,172 @@
 
 Docker-based local workbench for protein design workflows on this machine.
 
+本仓库是这台机器上的蛋白设计本地工作台，主要用 Docker Compose 管理
+Foundry/RFD3、BindCraft、AlphaFold Multimer、Rosetta、PepMimic 和 RFpeptide
+等运行环境。
+
 This repository tracks only lightweight engineering assets. Large local assets
 stay outside Git under `data/` and `releases/`.
 
-## Repository Policy
+本仓库只跟踪轻量工程文件。模型权重、数据库、设计输出和镜像归档等大文件保留在
+`data/` 和 `releases/` 下，不进入 Git。
 
-Tracked in Git:
+## Repository Policy / 仓库策略
 
-- `compose/`: Docker Compose service definitions
-- `images/*/Dockerfile`: Docker build recipes
-- `scripts/`: utility scripts
-- `docs/`, `README.md`, `.gitignore`, and other small configuration files
+Tracked in Git / Git 跟踪内容:
 
-Not tracked in Git:
+- `compose/`: Docker Compose service definitions / Docker Compose 服务定义
+- `images/*/Dockerfile`: Docker build recipes / Docker 镜像构建文件
+- `scripts/`: utility scripts / 工具脚本
+- `docs/`, `README.md`, `.gitignore`, and other small configuration files /
+  文档、README、忽略规则和其他小型配置文件
 
-- model weights and checkpoints
-- Rosetta source/database assets
-- AlphaFold, BindCraft, Foundry, PepMimic, and RFdiffusion parameters
-- generated outputs and score tables
-- Docker image archives and release bundles
-- local crash logs, PDFs, shell history, and editor caches
+Not tracked in Git / Git 不跟踪内容:
 
-## Local Asset Layout
+- model weights and checkpoints / 模型权重和检查点
+- Rosetta source/database assets / Rosetta 源码和数据库资源
+- AlphaFold, BindCraft, Foundry, PepMimic, and RFdiffusion parameters /
+  AlphaFold、BindCraft、Foundry、PepMimic 和 RFdiffusion 参数
+- generated outputs and score tables / 生成结果和评分表
+- Docker image archives and release bundles / Docker 镜像归档和发布包
+- local crash logs, PDFs, shell history, and editor caches /
+  本地崩溃日志、PDF、shell 历史和编辑器缓存
 
-- `data/inputs/`: input structures and workflow configuration
-- `data/outputs/`: generated workflow outputs
-- `data/alphafold_db/`: AlphaFold parameter/database assets
-- `data/bindcraft_models/`: BindCraft model parameters
-- `data/foundry_checkpoints/`: Foundry/ProteinMPNN/LigandMPNN checkpoints
-- `data/pepmimic_checkpoints/`: PepMimic checkpoints
-- `data/rfpeptide_models/`: RFpeptide/RFdiffusion checkpoints
-- `data/rosetta_db`: symlink to the local Rosetta database
-- `releases/`: exported local image bundles
+## Local Asset Layout / 本地资产目录
 
-## Compose Profiles
+| Path / 路径 | Purpose / 用途 |
+| --- | --- |
+| `data/inputs/` | input structures and workflow configuration / 输入结构和流程配置 |
+| `data/outputs/` | generated workflow outputs / 生成的设计结果 |
+| `data/alphafold_db/` | AlphaFold parameter/database assets / AlphaFold 参数和数据库 |
+| `data/bindcraft_models/` | BindCraft model parameters / BindCraft 模型参数 |
+| `data/foundry_checkpoints/` | Foundry/ProteinMPNN/LigandMPNN checkpoints / Foundry、ProteinMPNN、LigandMPNN 检查点 |
+| `data/pepmimic_checkpoints/` | PepMimic checkpoints / PepMimic 检查点 |
+| `data/rfpeptide_models/` | RFpeptide/RFdiffusion checkpoints / RFpeptide、RFdiffusion 检查点 |
+| `data/rosetta_db` | symlink to the local Rosetta database / 指向本地 Rosetta 数据库的软链接 |
+| `releases/` | exported local image bundles / 导出的本地镜像包 |
 
-| Profile | Service | Purpose | GPU |
+## Workflow Overview / 工作流概览
+
+```mermaid
+flowchart LR
+    inputs["data/inputs<br/>structures and configs<br/>结构与配置"]
+    outputs["data/outputs<br/>designs, scores, reports<br/>设计、评分、报告"]
+    scripts["scripts/<br/>smoke checks and table utilities<br/>烟测与表格工具"]
+
+    subgraph design["GPU design and validation services<br/>GPU 设计与验证服务"]
+        foundry["pd-foundry-gpu<br/>Foundry, RFD3, ProteinMPNN, LigandMPNN"]
+        bindcraft["pd-bindcraft-gpu<br/>BindCraft binder design<br/>BindCraft 结合蛋白设计"]
+        af2["pd-af2multimer-gpu<br/>AlphaFold Multimer validation<br/>AlphaFold Multimer 验证"]
+        pepmimic["pd-pepmimic-gpu<br/>PepMimic"]
+        rfpeptide["pd-rfpeptide-gpu<br/>RFpeptide, RFdiffusion macrocycles<br/>RFpeptide 与大环设计"]
+    end
+
+    subgraph post["CPU post-processing<br/>CPU 后处理"]
+        rosetta["pd-rosetta-cpu-parallel<br/>Rosetta relax, scoring, filters<br/>Rosetta 优化、评分、过滤"]
+        merge["merge_confidence_tables.py<br/>confidence summary merge<br/>置信度汇总合并"]
+    end
+
+    inputs --> foundry
+    inputs --> bindcraft
+    inputs --> af2
+    inputs --> pepmimic
+    inputs --> rfpeptide
+    foundry --> outputs
+    bindcraft --> outputs
+    af2 --> outputs
+    pepmimic --> outputs
+    rfpeptide --> outputs
+    outputs --> rosetta
+    rosetta --> outputs
+    outputs --> merge
+    scripts --> design
+    scripts --> post
+```
+
+See [docs/service-flows.md](docs/service-flows.md) for per-service build,
+mount, and output diagrams.
+
+每个服务的构建输入、运行时挂载和输出位置见
+[docs/service-flows.md](docs/service-flows.md)。
+
+## Docker Flow / Docker 流程
+
+```mermaid
+flowchart TD
+    dockerfiles["images/*/Dockerfile"]
+    build["docker compose --profile <profile> build"]
+    images["local Docker images<br/>pd-*:latest or pd-*:fixed<br/>本地镜像"]
+    compose["compose/docker-compose.yml"]
+    profile["selected Compose profile<br/>选择的 Compose 配置组"]
+    mounts["mounted local assets<br/>data/inputs, data/outputs, model dirs, licenses<br/>挂载的输入、输出、模型和许可证目录"]
+    shell["interactive service shell<br/>working_dir: /workspace<br/>交互式服务 shell"]
+    checks["scripts/smoke-test.sh <target><br/>烟测"]
+
+    dockerfiles --> build
+    build --> images
+    images --> compose
+    compose --> profile
+    profile --> mounts
+    mounts --> shell
+    shell --> checks
+    checks --> outputs["validated runtime or actionable failure<br/>可用环境或可处理的失败信息"]
+```
+
+## Compose Profiles / Compose 配置组
+
+| Profile / 配置组 | Service / 服务 | Purpose / 用途 | GPU |
 | --- | --- | --- | --- |
-| `foundry`, `design`, `rfd3`, `mpnn` | `pd-foundry-gpu` | Foundry/RFD3/MPNN workflows | yes |
-| `bindcraft` | `pd-bindcraft-gpu` | BindCraft binder design | yes |
-| `af2`, `multimer` | `pd-af2multimer-gpu` | AlphaFold Multimer validation | yes |
-| `rosetta`, `post`, `rosetta-parallel` | `pd-rosetta-cpu-parallel` | Rosetta relax/scoring/post-processing | no |
-| `pepmimic` | `pd-pepmimic-gpu` | PepMimic workflows | yes |
-| `rfpeptide`, `macrocycle` | `pd-rfpeptide-gpu` | RFpeptide/RFdiffusion macrocycle workflows | yes |
+| `foundry`, `design`, `rfd3`, `mpnn` | `pd-foundry-gpu` | Foundry/RFD3/MPNN workflows / Foundry、RFD3、MPNN 流程 | yes / 是 |
+| `bindcraft` | `pd-bindcraft-gpu` | BindCraft binder design / BindCraft 结合蛋白设计 | yes / 是 |
+| `af2`, `multimer` | `pd-af2multimer-gpu` | AlphaFold Multimer validation / AlphaFold Multimer 验证 | yes / 是 |
+| `rosetta`, `post`, `rosetta-parallel` | `pd-rosetta-cpu-parallel` | Rosetta relax/scoring/post-processing / Rosetta 优化、评分、后处理 | no / 否 |
+| `pepmimic` | `pd-pepmimic-gpu` | PepMimic workflows / PepMimic 流程 | yes / 是 |
+| `rfpeptide`, `macrocycle` | `pd-rfpeptide-gpu` | RFpeptide/RFdiffusion macrocycle workflows / RFpeptide 与 RFdiffusion 大环流程 | yes / 是 |
 
-## Common Commands
+## Runtime Mounts / 运行时挂载
 
-Validate Compose configuration:
+All Compose services mount `data/inputs`, `data/outputs`, and `scripts` into the
+container.
+
+所有 Compose 服务都会把 `data/inputs`、`data/outputs` 和 `scripts` 挂载到容器中。
+
+Service-specific mounts / 服务专属挂载:
+
+| Service / 服务 | Mounted assets / 挂载资源 |
+| --- | --- |
+| `pd-foundry-gpu` | `data/foundry_checkpoints` |
+| `pd-bindcraft-gpu` | `data/bindcraft_models`, `data/licenses` |
+| `pd-af2multimer-gpu` | `data/alphafold_db` |
+| `pd-rosetta-cpu-parallel` | `data/rosetta_db`, `data/licenses` |
+| `pd-pepmimic-gpu` | `data/pepmimic_checkpoints`, `data/licenses` |
+| `pd-rfpeptide-gpu` | `data/rfpeptide_models` |
+
+## Common Commands / 常用命令
+
+Validate Compose configuration / 验证 Compose 配置:
 
 ```bash
 docker compose -f compose/docker-compose.yml config --quiet
 ```
 
-Check host GPU:
+Check host GPU / 检查宿主机 GPU:
 
 ```bash
 nvidia-smi
 ```
 
-Open a service shell:
+Build or refresh a service image / 构建或刷新服务镜像:
+
+```bash
+docker compose -f compose/docker-compose.yml --profile foundry build pd-foundry-gpu
+docker compose -f compose/docker-compose.yml --profile af2 build pd-af2multimer-gpu
+docker compose -f compose/docker-compose.yml --profile rosetta build pd-rosetta-cpu-parallel
+docker compose -f compose/docker-compose.yml --profile pepmimic build pd-pepmimic-gpu
+docker compose -f compose/docker-compose.yml --profile rfpeptide build pd-rfpeptide-gpu
+```
+
+Open a service shell / 打开服务 shell:
 
 ```bash
 docker compose -f compose/docker-compose.yml --profile foundry run --rm pd-foundry-gpu
@@ -71,19 +178,40 @@ docker compose -f compose/docker-compose.yml --profile pepmimic run --rm pd-pepm
 docker compose -f compose/docker-compose.yml --profile rfpeptide run --rm pd-rfpeptide-gpu
 ```
 
-Run smoke checks:
+Run smoke checks / 运行烟测:
 
 ```bash
 ./scripts/smoke-test.sh all
 ```
 
-## Operational Notes
+Merge confidence JSON files into ranked CSV/XLSX tables /
+合并置信度 JSON 并输出排序后的 CSV/XLSX 表:
+
+```bash
+python3 scripts/merge_confidence_tables.py \
+  --root-dir data/outputs/AAAWZY/srcr-rf3
+```
+
+Write CSV only to an explicit path / 只写 CSV 到指定路径:
+
+```bash
+python3 scripts/merge_confidence_tables.py \
+  --root-dir data/outputs/AAAWZY/srcr-rf3 \
+  --out-csv /tmp/srcr-rf3-confidence.csv \
+  --no-xlsx
+```
+
+## Operational Notes / 运维注意事项
 
 - Use Compose for Rosetta so that `data/rosetta_db` is mounted at
-  `/opt/rosetta_db`.
+  `/opt/rosetta_db`. / Rosetta 请通过 Compose 运行，确保 `data/rosetta_db`
+  挂载到 `/opt/rosetta_db`。
 - Use `pd-rfpeptide-gpu:fixed` for RFpeptide. The local `latest` tag is not the
-  known-good runtime.
+  known-good runtime. / RFpeptide 使用 `pd-rfpeptide-gpu:fixed`，本地 `latest`
+  不是已确认可用的运行环境。
 - Do not commit local model files or workflow outputs. Check `git status`
-  before every commit.
+  before every commit. / 不要提交本地模型文件或工作流输出；每次提交前检查
+  `git status`。
 - Docker build cache is large on this machine. Do not prune it until critical
-  images are exported or confirmed rebuildable.
+  images are exported or confirmed rebuildable. / 这台机器上的 Docker 构建缓存较大；
+  关键镜像导出或确认可重建前不要清理。
