@@ -6,6 +6,10 @@ Docker-based local workbench for protein design workflows on this machine.
 Foundry/RFD3、BindCraft、AlphaFold Multimer、Rosetta、PepMimic 和 RFpeptide
 等运行环境。
 
+Current version / 当前版本: `v0.1.0`
+
+Release notes / 版本说明: [CHANGELOG.md](CHANGELOG.md)
+
 This repository tracks only lightweight engineering assets. Large local assets
 stay outside Git under `data/` and `releases/`.
 
