@@ -23,6 +23,8 @@ docs/assets/nature-methods-workflow-graphical-abstract.png
 这张图把项目压缩成五个阶段：`INPUTS` 准备输入，`DESIGN` 生成或改造候选，
 `VALIDATE` 用 AF2 Multimer 或 AF3 验证复合物，`REFINE` 用 Rosetta 优化结构，
 `RANK` 汇总指标并排序。后面每个工具章节会解释这些阶段对应的具体命令。
+README 的 `Method-Level Information Flow` 和 `Per-Image Workflow Figures`
+还分别给出了方法层信息流图和每个镜像的说明图。初学者可以先看图，再读命令参数表。
 
 ## 2. 项目目录怎么理解
 

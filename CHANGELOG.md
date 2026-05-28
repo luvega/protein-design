@@ -9,6 +9,8 @@
   overall project workflow.
 - Linked the graphical abstract from `docs/service-flows.md` and explained it
   for beginner readers in `docs/undergrad-guide-zh.md`.
+- Added a large project icon plus generated explanatory figures for the
+  method-level information flow and each per-image workflow in the README.
 
 ## v0.2.0 - 2026-05-28
 

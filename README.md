@@ -1,5 +1,9 @@
 # Protein Design Workbench
 
+<p align="center">
+  <img src="docs/assets/project-icon-nature-methods.png" alt="Protein Design Workbench project icon" width="260">
+</p>
+
 Docker-based local workbench for protein design workflows on this machine.
 
 本仓库是这台机器上的蛋白设计本地工作台，主要用 Docker Compose 管理
@@ -99,12 +103,12 @@ The graphical abstract below was generated with `imagegen` in a
 Nature Methods-style academic visual language. It integrates the repository
 workflow overview, method-level information flow, and per-image workflow
 figures into one reader-facing map. Exact tool names, paths, and information
-transfer rules are documented in the deterministic Mermaid figures and tables
-that follow.
+transfer rules are documented in the captions, tables, and remaining
+operational Mermaid diagrams that follow.
 
 下图使用 `imagegen` 生成，采用接近 Nature Methods 图形摘要的学术视觉风格。它把
 项目总览、方法层信息流和各镜像流程整合成一张便于阅读的流程图。准确的工具名称、
-路径和信息传递关系以随后可维护的 Mermaid 图和表格为准。
+路径和信息传递关系以随后可维护的图注、表格和运维 Mermaid 图为准。
 
 ![Nature Methods-style protein design workflow graphical abstract](docs/assets/nature-methods-workflow-graphical-abstract.png)
 
@@ -134,26 +138,15 @@ configuration files, confidence metrics, and ranked candidate tables.
 
 ### Overall Project Flow / 整体项目流程
 
-```mermaid
-flowchart LR
-    question["Research question<br/>target, epitope, peptide class<br/>研究问题：靶点、表位、多肽类型"]
-    inputs["Input preparation<br/>PDB, FASTA, JSON, hotspots, constraints<br/>输入整理：结构、序列、热点、约束"]
-    generation["Generative design<br/>backbones, binders, mimetics, macrocycles<br/>生成设计：骨架、结合肽、模拟肽、大环"]
-    redesign["Sequence and interface optimization<br/>MPNN, BindCraft, motif-aware redesign<br/>序列与界面优化"]
-    validation["Structure validation<br/>AF2 Multimer, AF3<br/>结构验证"]
-    refinement["Physical refinement<br/>Rosetta relax and scoring<br/>物理优化与打分"]
-    aggregation["Evidence aggregation<br/>confidence tables, ranks, filters<br/>证据汇总：置信度、排序、过滤"]
-    decision["Candidate portfolio<br/>structures, sequences, metrics, provenance<br/>候选集合：结构、序列、指标、来源"]
+![Method-level information flow](docs/assets/workflows/method-level-information-flow.png)
 
-    question --> inputs
-    inputs --> generation
-    generation --> redesign
-    redesign --> validation
-    validation --> refinement
-    refinement --> aggregation
-    validation --> aggregation
-    aggregation --> decision
-```
+This figure summarizes the conceptual data path from research question to
+candidate ranking. The key point is that structural hypotheses, sequence
+variants, database evidence, and confidence metrics remain explicit objects
+throughout the workflow rather than hidden intermediate state.
+
+该图概括了从研究问题到候选排序的概念性信息路径。重点是：结构假设、序列变体、
+数据库证据和置信度指标在整个流程中都以显式对象传递，而不是隐藏在中间状态中。
 
 ### Tool Roles and Transferred Information / 工具角色与传递信息
 
@@ -171,131 +164,82 @@ flowchart LR
 
 #### `pd-foundry-gpu`
 
-```mermaid
-flowchart LR
-    in1["Input structures<br/>PDB, chain IDs, receptor context"]
-    in2["Design constraints<br/>contigs, fixed residues, motif or interface rules"]
-    model["Foundry / RFD3<br/>backbone and complex generation"]
-    mpnn["ProteinMPNN / LigandMPNN<br/>sequence assignment and redesign"]
-    out["Outputs<br/>candidate structures, sequences, design metadata"]
-    down["Downstream<br/>AF2/AF3 validation, Rosetta refinement, ranking"]
+![Foundry/RFD3/MPNN workflow](docs/assets/workflows/pd-foundry-gpu-workflow.png)
 
-    in1 --> model
-    in2 --> model
-    model --> mpnn
-    mpnn --> out
-    out --> down
-```
+Input emphasis: target structures, contig definitions, motif/interface rules,
+and fixed residues. The image highlights backbone generation followed by
+MPNN-style sequence redesign, producing candidate structures and designed
+sequences for validation.
+
+输入侧重靶点结构、contig 定义、模体/界面规则和固定残基。图中强调先生成骨架，
+再进行 MPNN 风格的序列改造，输出候选结构和设计序列用于后续验证。
 
 #### `pd-bindcraft-gpu`
 
-```mermaid
-flowchart LR
-    target["Target structure<br/>PDB, receptor chain, binding surface"]
-    settings["Run settings<br/>hotspots, binder length, filters"]
-    search["BindCraft design loop<br/>interface-aware generation and optimization"]
-    evidence["Intermediate evidence<br/>trajectories, sequence variants, interface metrics"]
-    out["Outputs<br/>binder structures, scores, accepted designs"]
-    down["Downstream<br/>AF2/AF3 complex validation and Rosetta scoring"]
+![BindCraft workflow](docs/assets/workflows/pd-bindcraft-gpu-workflow.png)
 
-    target --> search
-    settings --> search
-    search --> evidence
-    evidence --> out
-    out --> down
-```
+Input emphasis: receptor structure, hotspot residues, chain definitions,
+binder length, and filtering settings. The image focuses on iterative
+interface-aware design, where structural trajectories and interface scores
+select candidate binders for validation.
+
+输入侧重受体结构、热点残基、链定义、binder 长度和过滤设置。图中突出面向界面的
+迭代设计过程，通过结构轨迹和界面评分筛选候选结合体。
 
 #### `pd-af2multimer-gpu`
 
-```mermaid
-flowchart LR
-    fasta["Complex FASTA<br/>target chains and peptide/binder chains"]
-    db["AF2 databases<br/>MSA and template evidence"]
-    infer["AlphaFold 2 Multimer<br/>complex structure inference"]
-    metrics["Confidence metrics<br/>pLDDT, pTM, ipTM, PAE"]
-    out["Ranked models<br/>PDB/CIF plus JSON summaries"]
-    down["Downstream<br/>interface triage, Rosetta relax, confidence table merge"]
+![AlphaFold 2 Multimer workflow](docs/assets/workflows/pd-af2multimer-gpu-workflow.png)
 
-    fasta --> infer
-    db --> infer
-    infer --> metrics
-    metrics --> out
-    out --> down
-```
+Input emphasis: multi-chain FASTA plus MSA/template database evidence. The
+image highlights complex inference and confidence outputs, especially pLDDT,
+pTM, ipTM, and PAE-like matrices used for interface triage.
+
+输入侧重多链 FASTA 以及 MSA/模板数据库证据。图中突出复合物推断和置信度输出，
+尤其是用于界面筛选的 pLDDT、pTM、ipTM 和 PAE 类矩阵。
 
 #### `pd-af3-gpu`
 
-```mermaid
-flowchart LR
-    json["AF3 JSON<br/>molecules, seeds, template date, run options"]
-    model["Model file<br/>data/alphafold3/models/af3.bin.zst"]
-    db["Public databases<br/>data/alphafold3/public_databases"]
-    infer["AlphaFold 3<br/>JAX-based structure inference"]
-    cache["JAX cache<br/>compiled kernels reused across runs"]
-    out["Outputs<br/>CIF structures, ranking data, confidence JSON"]
-    down["Downstream<br/>Rosetta refinement and comparative ranking"]
+![AlphaFold 3 workflow](docs/assets/workflows/pd-af3-gpu-workflow.png)
 
-    json --> infer
-    model --> infer
-    db --> infer
-    cache <--> infer
-    infer --> out
-    out --> down
-```
+Input emphasis: AF3 JSON molecule specifications, `af3.bin.zst`, public
+databases, template date, and JAX compilation cache. The image separates AF3
+from AF2 Multimer by showing JSON-native inputs and model/database mounts.
+
+输入侧重 AF3 JSON 分子定义、`af3.bin.zst`、公共数据库、模板日期和 JAX 编译缓存。
+图中特意把 AF3 与 AF2 Multimer 区分开，强调 JSON 输入以及模型/数据库挂载。
 
 #### `pd-rosetta-cpu-parallel`
 
-```mermaid
-flowchart LR
-    structures["Candidate structures<br/>PDB/CIF from design or validation"]
-    db["Rosetta database<br/>residue types, scoring tables, protocols"]
-    relax["Rosetta relax<br/>local optimization and steric correction"]
-    score["Scoring and filters<br/>energy, interface, geometry checks"]
-    out["Outputs<br/>relaxed PDB files and score tables"]
-    down["Downstream<br/>final triage and report generation"]
+![Rosetta workflow](docs/assets/workflows/pd-rosetta-cpu-parallel-workflow.png)
 
-    structures --> relax
-    db --> relax
-    relax --> score
-    score --> out
-    out --> down
-```
+Input emphasis: candidate PDB/CIF structures and the Rosetta database. The
+image highlights local physical refinement, steric correction, scoring, and
+filtering before final candidate triage.
+
+输入侧重候选 PDB/CIF 结构和 Rosetta 数据库。图中突出局部物理优化、空间冲突修正、
+打分和过滤，然后进入最终候选筛选。
 
 #### `pd-pepmimic-gpu`
 
-```mermaid
-flowchart LR
-    motif["Reference motif or epitope<br/>geometry to mimic"]
-    params["PepMimic checkpoints<br/>model parameters"]
-    generate["PepMimic workflow<br/>mimetic peptide generation"]
-    screen["Structural plausibility screen<br/>candidate shape and motif retention"]
-    out["Outputs<br/>mimetic peptides, structures, scores"]
-    down["Downstream<br/>AF2/AF3 validation and Rosetta scoring"]
+![PepMimic workflow](docs/assets/workflows/pd-pepmimic-gpu-workflow.png)
 
-    motif --> generate
-    params --> generate
-    generate --> screen
-    screen --> out
-    out --> down
-```
+Input emphasis: epitope geometry, reference motifs, and PepMimic checkpoints.
+The image focuses on motif-preserving mimetic peptide generation and structural
+plausibility screening before AF2/AF3 validation.
+
+输入侧重表位几何、参考模体和 PepMimic checkpoint。图中强调保留模体几何的模拟肽
+生成，以及进入 AF2/AF3 前的结构合理性筛查。
 
 #### `pd-rfpeptide-gpu`
 
-```mermaid
-flowchart LR
-    constraints["Peptide design constraints<br/>contigs, macrocycle topology, target context"]
-    models["RFpeptide / RFdiffusion models<br/>mounted checkpoints"]
-    diffuse["Diffusion generation<br/>constrained backbone sampling"]
-    candidates["Candidate selection<br/>geometry, diversity, constraint satisfaction"]
-    out["Outputs<br/>cyclic or constrained peptide structures"]
-    down["Downstream<br/>sequence design, AF2/AF3 validation, Rosetta refinement"]
+![RFpeptide workflow](docs/assets/workflows/pd-rfpeptide-gpu-workflow.png)
 
-    constraints --> diffuse
-    models --> diffuse
-    diffuse --> candidates
-    candidates --> out
-    out --> down
-```
+Input emphasis: contig constraints, macrocycle topology, target context, and
+checkpoint assets. The image highlights diffusion-based constrained backbone
+sampling and selection by geometry, diversity, and constraint satisfaction.
+
+输入侧重 contig 约束、大环拓扑、靶点上下文和模型权重。图中突出基于扩散模型的
+约束骨架采样，并按几何合理性、多样性和约束满足程度筛选。
 
 See [docs/service-flows.md](docs/service-flows.md) for per-service build,
 mount, and output diagrams.

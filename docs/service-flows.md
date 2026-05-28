@@ -13,6 +13,21 @@ information states: inputs, design, validation, refinement, and ranked outputs.
 The Mermaid diagrams in this document remain the exact source of path-level
 details for each image.
 
+The README also includes generated explanatory figures for the method-level
+flow and each runtime image:
+
+| Figure / 图 | Asset / 图片 |
+| --- | --- |
+| Project icon / 项目大图标 | `assets/project-icon-nature-methods.png` |
+| Method-level information flow / 方法层信息流 | `assets/workflows/method-level-information-flow.png` |
+| Foundry/RFD3/MPNN | `assets/workflows/pd-foundry-gpu-workflow.png` |
+| BindCraft | `assets/workflows/pd-bindcraft-gpu-workflow.png` |
+| AlphaFold 2 Multimer | `assets/workflows/pd-af2multimer-gpu-workflow.png` |
+| AlphaFold 3 | `assets/workflows/pd-af3-gpu-workflow.png` |
+| Rosetta | `assets/workflows/pd-rosetta-cpu-parallel-workflow.png` |
+| PepMimic | `assets/workflows/pd-pepmimic-gpu-workflow.png` |
+| RFpeptide/RFdiffusion | `assets/workflows/pd-rfpeptide-gpu-workflow.png` |
+
 ## Foundry / RFD3 / MPNN
 
 ```mermaid
