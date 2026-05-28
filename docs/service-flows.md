@@ -4,6 +4,15 @@ This document maps each local Docker image to its build inputs, mounted runtime
 assets, and expected output locations. Large model, license, database, and
 workflow output files stay under `data/` and are not tracked by Git.
 
+For a reader-facing graphical summary, see the project-level visual abstract:
+
+![Nature Methods-style protein design workflow graphical abstract](assets/nature-methods-workflow-graphical-abstract.png)
+
+The figure compresses the same operational structure described below into five
+information states: inputs, design, validation, refinement, and ranked outputs.
+The Mermaid diagrams in this document remain the exact source of path-level
+details for each image.
+
 ## Foundry / RFD3 / MPNN
 
 ```mermaid

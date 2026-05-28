@@ -4,8 +4,11 @@
 
 ### Added
 
-- Added an `imagegen` visual abstract and academic method-level flow diagrams
-  to the README, covering each Docker image and the overall project workflow.
+- Added a Nature Methods-style `imagegen` graphical abstract and academic
+  method-level flow diagrams to the README, covering each Docker image and the
+  overall project workflow.
+- Linked the graphical abstract from `docs/service-flows.md` and explained it
+  for beginner readers in `docs/undergrad-guide-zh.md`.
 
 ## v0.2.0 - 2026-05-28
 

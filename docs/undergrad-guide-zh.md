@@ -14,6 +14,16 @@
 
 本项目不是一个网页软件。它更像一个“实验台”：你把输入文件放到 `data/inputs/`，用脚本启动对应工具，结果写到 `data/outputs/`，最后用表格脚本筛选候选分子。
 
+建议先看 README 中的图形摘要：
+
+```text
+docs/assets/nature-methods-workflow-graphical-abstract.png
+```
+
+这张图把项目压缩成五个阶段：`INPUTS` 准备输入，`DESIGN` 生成或改造候选，
+`VALIDATE` 用 AF2 Multimer 或 AF3 验证复合物，`REFINE` 用 Rosetta 优化结构，
+`RANK` 汇总指标并排序。后面每个工具章节会解释这些阶段对应的具体命令。
+
 ## 2. 项目目录怎么理解
 
 常用目录如下：

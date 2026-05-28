@@ -95,14 +95,31 @@ flowchart LR
     scripts --> post
 ```
 
-The visual abstract below was generated with `imagegen` as a high-level
-scientific overview. Exact tool names, paths, and information transfer rules are
-documented in the deterministic Mermaid figures and tables that follow.
+The graphical abstract below was generated with `imagegen` in a
+Nature Methods-style academic visual language. It integrates the repository
+workflow overview, method-level information flow, and per-image workflow
+figures into one reader-facing map. Exact tool names, paths, and information
+transfer rules are documented in the deterministic Mermaid figures and tables
+that follow.
 
-下图是使用 `imagegen` 生成的学术风格视觉摘要，用于快速理解整体系统。准确的工具名称、
+下图使用 `imagegen` 生成，采用接近 Nature Methods 图形摘要的学术视觉风格。它把
+项目总览、方法层信息流和各镜像流程整合成一张便于阅读的流程图。准确的工具名称、
 路径和信息传递关系以随后可维护的 Mermaid 图和表格为准。
 
-![Protein design workflow visual abstract](docs/assets/project-workflow-visual-abstract.png)
+![Nature Methods-style protein design workflow graphical abstract](docs/assets/nature-methods-workflow-graphical-abstract.png)
+
+Figure guide / 图示说明:
+
+- `INPUTS`: structures, sequences, AF3 JSON, FASTA, settings, and database
+  evidence. / 输入结构、序列、AF3 JSON、FASTA、配置和数据库证据。
+- `DESIGN`: generation and redesign modules such as Foundry/RFD3/MPNN,
+  BindCraft, PepMimic, and RFpeptide. / 生成与改造模块，包括
+  Foundry/RFD3/MPNN、BindCraft、PepMimic 和 RFpeptide。
+- `VALIDATE`: AF2 Multimer and AF3 complex inference with confidence metrics.
+  / AF2 Multimer 与 AF3 复合物推断和置信度指标。
+- `REFINE`: Rosetta physical relaxation and scoring. / Rosetta 物理优化与打分。
+- `RANK`: ranked candidate structures, sequences, confidence tables, and
+  decision-ready portfolios. / 排序后的候选结构、序列、置信度表和可决策候选集合。
 
 ## Method-Level Information Flow / 方法学信息流
 
