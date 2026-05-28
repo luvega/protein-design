@@ -95,6 +95,191 @@ flowchart LR
     scripts --> post
 ```
 
+The visual abstract below was generated with `imagegen` as a high-level
+scientific overview. Exact tool names, paths, and information transfer rules are
+documented in the deterministic Mermaid figures and tables that follow.
+
+下图是使用 `imagegen` 生成的学术风格视觉摘要，用于快速理解整体系统。准确的工具名称、
+路径和信息传递关系以随后可维护的 Mermaid 图和表格为准。
+
+![Protein design workflow visual abstract](docs/assets/project-workflow-visual-abstract.png)
+
+## Method-Level Information Flow / 方法学信息流
+
+The workbench is organized as a modular computational pipeline. Each Docker
+image preserves a distinct methodological role, while `data/inputs` and
+`data/outputs` act as explicit boundaries for exchanging structures, sequences,
+configuration files, confidence metrics, and ranked candidate tables.
+
+本项目按模块化计算流程组织。每个 Docker 镜像承担相对独立的方法学角色；
+`data/inputs` 和 `data/outputs` 是结构、序列、配置、置信度指标和候选排序表之间
+传递信息的边界。
+
+### Overall Project Flow / 整体项目流程
+
+```mermaid
+flowchart LR
+    question["Research question<br/>target, epitope, peptide class<br/>研究问题：靶点、表位、多肽类型"]
+    inputs["Input preparation<br/>PDB, FASTA, JSON, hotspots, constraints<br/>输入整理：结构、序列、热点、约束"]
+    generation["Generative design<br/>backbones, binders, mimetics, macrocycles<br/>生成设计：骨架、结合肽、模拟肽、大环"]
+    redesign["Sequence and interface optimization<br/>MPNN, BindCraft, motif-aware redesign<br/>序列与界面优化"]
+    validation["Structure validation<br/>AF2 Multimer, AF3<br/>结构验证"]
+    refinement["Physical refinement<br/>Rosetta relax and scoring<br/>物理优化与打分"]
+    aggregation["Evidence aggregation<br/>confidence tables, ranks, filters<br/>证据汇总：置信度、排序、过滤"]
+    decision["Candidate portfolio<br/>structures, sequences, metrics, provenance<br/>候选集合：结构、序列、指标、来源"]
+
+    question --> inputs
+    inputs --> generation
+    generation --> redesign
+    redesign --> validation
+    validation --> refinement
+    refinement --> aggregation
+    validation --> aggregation
+    aggregation --> decision
+```
+
+### Tool Roles and Transferred Information / 工具角色与传递信息
+
+| Docker image / 镜像 | Methodological role / 方法学角色 | Input information emphasis / 输入信息侧重 | Transformation focus / 转换重点 | Output information passed downstream / 下游传递信息 |
+| --- | --- | --- | --- | --- |
+| `pd-foundry-gpu` | Foundry/RFD3/ProteinMPNN/LigandMPNN design environment / 生成式设计与序列设计环境 | Target structures, contigs, chain topology, fixed residues, design constraints / 靶点结构、contig、链拓扑、固定残基、设计约束 | Backbone generation and sequence compatibility under geometric constraints / 在几何约束下生成骨架并匹配序列 | Candidate backbones, designed sequences, design metadata / 候选骨架、设计序列、设计元数据 |
+| `pd-bindcraft-gpu` | Binder and peptide-binder optimization / 结合蛋白或结合肽优化 | Target PDB, hotspot residues, chain definitions, run settings / 靶点 PDB、热点残基、链定义、运行配置 | Interface-aware sequence-structure co-optimization / 面向界面的序列-结构协同优化 | Binder structures, trajectories, sequence sets, interface scores / 结合体结构、轨迹、序列集合、界面评分 |
+| `pd-af2multimer-gpu` | AlphaFold 2 Multimer complex validation / AF2 Multimer 复合物验证 | FASTA chains, MSA/template database evidence, multimer preset / 多链 FASTA、MSA/模板数据库证据、multimer 配置 | Complex structure inference and interface confidence estimation / 复合物结构推断与界面可信度估计 | Ranked models, pLDDT, pTM, ipTM, PAE, interface diagnostics / 排序模型、pLDDT、pTM、ipTM、PAE、界面诊断 |
+| `pd-af3-gpu` | AlphaFold 3 validation for protein, peptide, and broader molecular inputs / AF3 结构验证 | AF3 JSON, model parameters, public databases, template date / AF3 JSON、模型权重、公共数据库、模板日期 | Generalized structure inference with JAX compilation cache / 利用 JAX 缓存进行更通用的结构推断 | CIF structures, ranking outputs, confidence JSON, run settings / CIF 结构、排序结果、置信度 JSON、运行参数 |
+| `pd-rosetta-cpu-parallel` | Rosetta physical refinement and scoring / Rosetta 物理优化与打分 | Candidate PDB/CIF, Rosetta database, optional constraints / 候选 PDB/CIF、Rosetta 数据库、可选约束 | Local relaxation, steric correction, energy and interface scoring / 局部 relax、空间冲突修正、能量与界面评分 | Relaxed structures, score files, filtered candidates / 优化结构、打分文件、过滤后的候选 |
+| `pd-pepmimic-gpu` | PepMimic motif and epitope mimicry workflow / PepMimic 模体和表位模拟 | Epitope geometry, reference motif, checkpoint assets / 表位几何、参考模体、checkpoint | Learning-based peptide mimic generation / 基于模型的多肽模拟生成 | Mimetic peptide candidates, structural hypotheses, scores / 模拟肽候选、结构假设、评分 |
+| `pd-rfpeptide-gpu` | RFpeptide/RFdiffusion macrocycle and constrained peptide generation / RFpeptide/RFdiffusion 大环与约束多肽生成 | Contig constraints, macrocycle settings, model checkpoints / contig 约束、大环设置、模型权重 | Diffusion-based constrained backbone generation / 基于扩散模型的约束骨架生成 | Cyclic or constrained peptide backbones, candidate designs / 环肽或约束多肽骨架、候选设计 |
+
+### Per-Image Workflow Figures / 各镜像流程图
+
+#### `pd-foundry-gpu`
+
+```mermaid
+flowchart LR
+    in1["Input structures<br/>PDB, chain IDs, receptor context"]
+    in2["Design constraints<br/>contigs, fixed residues, motif or interface rules"]
+    model["Foundry / RFD3<br/>backbone and complex generation"]
+    mpnn["ProteinMPNN / LigandMPNN<br/>sequence assignment and redesign"]
+    out["Outputs<br/>candidate structures, sequences, design metadata"]
+    down["Downstream<br/>AF2/AF3 validation, Rosetta refinement, ranking"]
+
+    in1 --> model
+    in2 --> model
+    model --> mpnn
+    mpnn --> out
+    out --> down
+```
+
+#### `pd-bindcraft-gpu`
+
+```mermaid
+flowchart LR
+    target["Target structure<br/>PDB, receptor chain, binding surface"]
+    settings["Run settings<br/>hotspots, binder length, filters"]
+    search["BindCraft design loop<br/>interface-aware generation and optimization"]
+    evidence["Intermediate evidence<br/>trajectories, sequence variants, interface metrics"]
+    out["Outputs<br/>binder structures, scores, accepted designs"]
+    down["Downstream<br/>AF2/AF3 complex validation and Rosetta scoring"]
+
+    target --> search
+    settings --> search
+    search --> evidence
+    evidence --> out
+    out --> down
+```
+
+#### `pd-af2multimer-gpu`
+
+```mermaid
+flowchart LR
+    fasta["Complex FASTA<br/>target chains and peptide/binder chains"]
+    db["AF2 databases<br/>MSA and template evidence"]
+    infer["AlphaFold 2 Multimer<br/>complex structure inference"]
+    metrics["Confidence metrics<br/>pLDDT, pTM, ipTM, PAE"]
+    out["Ranked models<br/>PDB/CIF plus JSON summaries"]
+    down["Downstream<br/>interface triage, Rosetta relax, confidence table merge"]
+
+    fasta --> infer
+    db --> infer
+    infer --> metrics
+    metrics --> out
+    out --> down
+```
+
+#### `pd-af3-gpu`
+
+```mermaid
+flowchart LR
+    json["AF3 JSON<br/>molecules, seeds, template date, run options"]
+    model["Model file<br/>data/alphafold3/models/af3.bin.zst"]
+    db["Public databases<br/>data/alphafold3/public_databases"]
+    infer["AlphaFold 3<br/>JAX-based structure inference"]
+    cache["JAX cache<br/>compiled kernels reused across runs"]
+    out["Outputs<br/>CIF structures, ranking data, confidence JSON"]
+    down["Downstream<br/>Rosetta refinement and comparative ranking"]
+
+    json --> infer
+    model --> infer
+    db --> infer
+    cache <--> infer
+    infer --> out
+    out --> down
+```
+
+#### `pd-rosetta-cpu-parallel`
+
+```mermaid
+flowchart LR
+    structures["Candidate structures<br/>PDB/CIF from design or validation"]
+    db["Rosetta database<br/>residue types, scoring tables, protocols"]
+    relax["Rosetta relax<br/>local optimization and steric correction"]
+    score["Scoring and filters<br/>energy, interface, geometry checks"]
+    out["Outputs<br/>relaxed PDB files and score tables"]
+    down["Downstream<br/>final triage and report generation"]
+
+    structures --> relax
+    db --> relax
+    relax --> score
+    score --> out
+    out --> down
+```
+
+#### `pd-pepmimic-gpu`
+
+```mermaid
+flowchart LR
+    motif["Reference motif or epitope<br/>geometry to mimic"]
+    params["PepMimic checkpoints<br/>model parameters"]
+    generate["PepMimic workflow<br/>mimetic peptide generation"]
+    screen["Structural plausibility screen<br/>candidate shape and motif retention"]
+    out["Outputs<br/>mimetic peptides, structures, scores"]
+    down["Downstream<br/>AF2/AF3 validation and Rosetta scoring"]
+
+    motif --> generate
+    params --> generate
+    generate --> screen
+    screen --> out
+    out --> down
+```
+
+#### `pd-rfpeptide-gpu`
+
+```mermaid
+flowchart LR
+    constraints["Peptide design constraints<br/>contigs, macrocycle topology, target context"]
+    models["RFpeptide / RFdiffusion models<br/>mounted checkpoints"]
+    diffuse["Diffusion generation<br/>constrained backbone sampling"]
+    candidates["Candidate selection<br/>geometry, diversity, constraint satisfaction"]
+    out["Outputs<br/>cyclic or constrained peptide structures"]
+    down["Downstream<br/>sequence design, AF2/AF3 validation, Rosetta refinement"]
+
+    constraints --> diffuse
+    models --> diffuse
+    diffuse --> candidates
+    candidates --> out
+    out --> down
+```
+
 See [docs/service-flows.md](docs/service-flows.md) for per-service build,
 mount, and output diagrams.
 

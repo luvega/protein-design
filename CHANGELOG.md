@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-No unreleased changes.
+### Added
+
+- Added an `imagegen` visual abstract and academic method-level flow diagrams
+  to the README, covering each Docker image and the overall project workflow.
 
 ## v0.2.0 - 2026-05-28
 
