@@ -170,6 +170,53 @@ Example:
 RUN_FULL=1 ./examples/af3/run-check-or-full.sh
 ```
 
+## Verified Full Example / 已验证完整示例
+
+The minimal example was run successfully on 2026-05-29:
+
+最小示例已于 2026-05-29 成功运行：
+
+```bash
+RUN_FULL=1 ./examples/af3/run-check-or-full.sh
+```
+
+Observed runtime on the current HDD-backed database layout:
+
+当前机械硬盘数据库布局下观察到的耗时：
+
+| Stage / 阶段 | Runtime / 耗时 |
+| --- | --- |
+| Protein MSA search / 蛋白 MSA 检索 | about 1506 s / 约 1506 秒 |
+| Template search / 模板检索 | about 2 s / 约 2 秒 |
+| Model inference / 模型推理 | about 79 s / 约 79 秒 |
+
+Output directory:
+
+输出目录：
+
+```text
+data/outputs/examples/af3-example/example_peptide/
+```
+
+Important output files:
+
+主要输出文件：
+
+| File / 文件 | Purpose / 用途 |
+| --- | --- |
+| `example_peptide_model.cif` | predicted model / 预测结构 |
+| `example_peptide_confidences.json` | residue-level confidence values / 残基层置信度 |
+| `example_peptide_summary_confidences.json` | summary confidence metrics / 汇总置信度指标 |
+| `example_peptide_ranking_scores.csv` | seed/sample ranking table / seed 与 sample 排名表 |
+| `example_peptide_data.json` | processed AF3 model input / 处理后的 AF3 模型输入 |
+
+The observed ranking score was `0.8828493945547446`, with `ptm` `0.38`.
+Because this is a single short peptide example, these numbers should be treated
+as runtime validation outputs, not as a scientifically meaningful benchmark.
+
+本次观察到的 `ranking_score` 为 `0.8828493945547446`，`ptm` 为 `0.38`。由于该
+示例只是单条短肽，这些数值只用于确认运行流程，不应作为有科学意义的性能基准。
+
 Use your own input JSON:
 
 使用自己的输入 JSON：

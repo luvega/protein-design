@@ -4,6 +4,20 @@
 
 No unreleased changes.
 
+## v0.3.1 - 2026-05-29
+
+### Changed
+
+- Documented the first successful full AF3 example run against the completed
+  local database.
+
+### Verified
+
+- `RUN_FULL=1 ./examples/af3/run-check-or-full.sh`
+- Output written to `data/outputs/examples/af3-example/example_peptide/`.
+- AF3 protein MSA search completed in about `1506 s`; model inference completed
+  in about `79 s` on the current HDD-backed database layout.
+
 ## v0.3.0 - 2026-05-29
 
 ### Added

@@ -10,7 +10,7 @@ Docker-based local workbench for protein design workflows on this machine.
 Foundry/RFD3、BindCraft、AlphaFold Multimer、AlphaFold 3、Rosetta、PepMimic
 和 RFpeptide 等运行环境。
 
-Current version / 当前版本: `v0.3.0`
+Current version / 当前版本: `v0.3.1`
 
 Release notes / 版本说明: [CHANGELOG.md](CHANGELOG.md)
 
@@ -442,6 +442,17 @@ Run workflow examples / 运行工作流示例:
 ./examples/rosetta/run-relax-pdl1.sh
 ./examples/confidence/run-merge-srcr.sh
 ```
+
+The full AF3 example was verified locally on 2026-05-29:
+`RUN_FULL=1 ./examples/af3/run-check-or-full.sh` wrote results to
+`data/outputs/examples/af3-example/example_peptide/`. On the current HDD-backed
+database layout, the MSA stage took about 25 minutes and model inference took
+about 79 seconds.
+
+AF3 完整示例已于 2026-05-29 在本机验证：
+`RUN_FULL=1 ./examples/af3/run-check-or-full.sh` 将结果写入
+`data/outputs/examples/af3-example/example_peptide/`。在当前机械硬盘数据库布局下，
+MSA 阶段约 25 分钟，模型推理约 79 秒。
 
 Merge confidence JSON files into ranked CSV/XLSX tables /
 合并置信度 JSON 并输出排序后的 CSV/XLSX 表:
