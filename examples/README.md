@@ -22,6 +22,7 @@ container, reads inputs from `data/inputs`, and writes outputs under
 | BindCraft | `examples/bindcraft/run-cd47-peptide.sh` | Runs the CD47 peptide binder example with a small tracked settings file. |
 | AF2 Multimer | `examples/af2multimer/run-check-or-full.sh` | Checks JAX GPU by default; full AlphaFold run is gated by `RUN_FULL=1`. |
 | AF3 | `examples/af3/run-check-or-full.sh` | Checks the independent AlphaFold 3 image and model mount; full runs are gated by `RUN_FULL=1`. |
+| AF3 batch | `examples/af3-batch/run-peptide-batch.sh` | Converts peptide candidate CSV rows to AF3 JSON, previews batch commands, and can run/summarize AF3 jobs. |
 | Rosetta | `examples/rosetta/run-relax-pdl1.sh` | Runs one Rosetta relax trajectory on `data/inputs/PDL1.pdb`. |
 | PepMimic | `examples/pepmimic/run-cd38-example.sh` | Runs PepMimic on its bundled CD38 example data and mounted checkpoint. |
 | RFpeptide | `examples/rfpeptide/run-macrocycle-smoke.sh` | Runs a one-design RFdiffusion cyclic peptide example. |
@@ -58,6 +59,20 @@ AlphaFold 3 与 AlphaFold 2 Multimer 使用不同镜像和资源目录。AF3 权
 `data/alphafold3/models/af3.bin.zst` 挂载到容器内
 `/root/models/af3.bin.zst`，数据库放在
 `data/alphafold3/public_databases`。
+
+AF3 batch validation starts from a CSV table:
+
+AF3 批量验证从 CSV 候选表开始：
+
+```bash
+./examples/af3-batch/run-peptide-batch.sh
+```
+
+The command above prepares JSON inputs and prints the full-run commands. Set
+`RUN_FULL=1` only when you are ready to scan the AF3 databases.
+
+上面的命令只准备 JSON 并打印完整运行命令。确认路径无误、准备占用 GPU 后，再设置
+`RUN_FULL=1`。
 
 For a fuller Chinese explanation of Linux commands, shell scripts, parameters,
 and peptide design workflow choices, read:

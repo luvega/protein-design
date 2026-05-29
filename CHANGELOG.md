@@ -4,6 +4,36 @@
 
 No unreleased changes.
 
+## v0.4.0 - 2026-05-29
+
+### Added
+
+- Added AF3 batch utilities for peptide candidate screening:
+  `scripts/prepare_af3_batch.py`, `scripts/run_af3_batch.py`, and
+  `scripts/summarize_af3_results.py`.
+- Added `examples/af3-batch/` with a peptide candidate table, batch wrapper,
+  and beginner-facing README.
+- Added `docs/af3-batch-validation.md` for the peptide-candidate-to-AF3-summary
+  workflow.
+- Added local image archives and checksum records for
+  `pd-bindcraft-gpu:installed`, `pd-pepmimic-gpu:latest`, and
+  `pd-rfpeptide-gpu:fixed`.
+
+### Changed
+
+- Updated README, examples, and Chinese beginner guide with AF3 batch
+  validation commands and result-summary guidance.
+
+### Verified
+
+- `./examples/af3-batch/run-peptide-batch.sh` in dry-run mode.
+- `python3 scripts/summarize_af3_results.py --root-dir data/outputs/examples/af3-example --out-csv /tmp/af3-example-summary.csv --top 5`
+- `python3 -m py_compile scripts/prepare_af3_batch.py scripts/run_af3_batch.py scripts/summarize_af3_results.py`
+- `./scripts/smoke-test.sh af3`
+- `sha256sum -c releases/pd-bindcraft-gpu_installed_20260529.tar.sha256`
+- `sha256sum -c releases/pd-pepmimic-gpu_latest_20260529.tar.sha256`
+- `sha256sum -c releases/pd-rfpeptide-gpu_fixed_20260529.tar.sha256`
+
 ## v0.3.1 - 2026-05-29
 
 ### Changed

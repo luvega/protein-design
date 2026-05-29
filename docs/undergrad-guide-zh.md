@@ -591,6 +591,72 @@ RUN_FULL=1 \
 ./examples/af3/run-check-or-full.sh
 ```
 
+### 9.2.1 AF3 批量验证：从候选多肽表到汇总表
+
+当你有多条候选多肽时，不建议手工一个一个写 AF3 JSON。本项目新增了一个批量验证
+流程：先把候选写成 CSV 表格，再自动生成 AF3 JSON，最后把 AF3 输出汇总成一个 CSV
+筛选表。
+
+示例候选表：
+
+```text
+examples/af3-batch/peptide_candidates.csv
+```
+
+表格最基本的列是：
+
+| 列 | 含义 |
+| --- | --- |
+| `name` | 候选多肽名称，也会成为 AF3 任务名。 |
+| `sequence` | 多肽氨基酸序列，使用标准单字母代码。 |
+| `description` | 备注，可写来源、突变设计思路等。 |
+
+先只准备 JSON 和预览命令：
+
+```bash
+./examples/af3-batch/run-peptide-batch.sh
+```
+
+这个命令会生成：
+
+```text
+data/inputs/af3-batch/example-peptides/*.json
+data/inputs/af3-batch/example-peptides/manifest.csv
+```
+
+真正运行批量 AF3：
+
+```bash
+BATCH_LIMIT=1 RUN_FULL=1 ./examples/af3-batch/run-peptide-batch.sh
+```
+
+`BATCH_LIMIT=1` 表示先只跑第一条，适合测试路径和数据库是否正常。确认无误后可以去掉
+`BATCH_LIMIT`，但要注意 AF3 会扫描大型数据库，当前机械硬盘上耗时较长。
+
+如果已经有 AF3 输出，可以单独汇总：
+
+```bash
+python3 scripts/summarize_af3_results.py \
+  --root-dir data/outputs/examples/af3-example \
+  --out-csv /tmp/af3-example-summary.csv \
+  --top 5
+```
+
+汇总表中常用列：
+
+| 列 | 含义 |
+| --- | --- |
+| `job_name` | AF3 任务名，对应候选多肽名称。 |
+| `ranking_score` | AF3 排序分数，第一轮筛选可从高到低看。 |
+| `ptm` | 整体拓扑可信度。 |
+| `iptm` | 链间相互作用可信度；多链复合物任务更重要。 |
+| `has_clash` | 是否存在明显冲突。 |
+| `model_cif` | 预测结构文件路径，可用 PyMOL 或 ChimeraX 打开。 |
+
+对药化和生科研究生来说，可以把这个批量流程理解成：把“候选物列表”变成“结构预测和
+置信度表”。它不能替代人工结构检查，也不能直接证明活性，但能帮助你更快排除明显不
+可信的候选多肽。
+
 ### 9.3 Rosetta relax：结构放松
 
 脚本：

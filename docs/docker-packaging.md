@@ -112,6 +112,40 @@ the tag explicitly:
 docker tag <image-id> pd-af3-gpu:v3.0.2
 ```
 
+## Current Local Archives / 当前本地归档
+
+The following local image archives are available under `releases/`:
+
+当前 `releases/` 下已有以下本地镜像归档：
+
+| Image / 镜像 | Archive / 归档文件 | Size / 大小 | SHA256 |
+| --- | --- | --- | --- |
+| `pd-af3-gpu:v3.0.2` | `pd-af3-gpu_v3.0.2_20260529.tar` | 8.2G | `aed72560055a05a1d8c92610f882f9e36bde65a309004b8957850c91e5664fa1` |
+| `pd-bindcraft-gpu:installed` | `pd-bindcraft-gpu_installed_20260529.tar` | 22G | `09ff19cdaa14ab33accde1ed997d2d28a3599f569100963046e711cec5b5f61c` |
+| `pd-pepmimic-gpu:latest` | `pd-pepmimic-gpu_latest_20260529.tar` | 24G | `693855f7f8776de4ae14870267b37683744106f66764b5162250c46fe53e2de5` |
+| `pd-rfpeptide-gpu:fixed` | `pd-rfpeptide-gpu_fixed_20260529.tar` | 11G | `1401377f34b9809691bcd90c6e8f87f8c924aca2d401d9234e71369217238dd5` |
+| `pd-rosetta-cpu-parallel:latest` | `pd-rosetta-cpu-parallel_20260404.tar` | 23G | not recorded / 未记录 |
+
+Verify a saved archive before loading:
+
+加载前先校验归档：
+
+```bash
+sha256sum -c releases/pd-bindcraft-gpu_installed_20260529.tar.sha256
+sha256sum -c releases/pd-pepmimic-gpu_latest_20260529.tar.sha256
+sha256sum -c releases/pd-rfpeptide-gpu_fixed_20260529.tar.sha256
+```
+
+Restore a saved image:
+
+恢复镜像：
+
+```bash
+docker load -i releases/pd-bindcraft-gpu_installed_20260529.tar
+docker load -i releases/pd-pepmimic-gpu_latest_20260529.tar
+docker load -i releases/pd-rfpeptide-gpu_fixed_20260529.tar
+```
+
 ## Validation / 验证
 
 After building or restoring the image, validate the Compose wiring and AF3
@@ -159,10 +193,12 @@ downloads first. The current priority is:
 
 | Priority / 优先级 | Image / 镜像 | Reason / 原因 |
 | --- | --- | --- |
-| 1 | `pd-af3-gpu:v3.0.2` | official AF3 build plus local wheelhouse dependency / 官方 AF3 构建与本地 wheelhouse 依赖 |
-| 2 | `pd-rosetta-cpu-parallel:latest` | large local Rosetta build context / 大型本地 Rosetta 构建环境 |
-| 3 | `pd-bindcraft-gpu:installed` | installed runtime state and model mounts / 已安装运行状态与模型挂载 |
-| 4 | `pd-pepmimic-gpu:latest` | large GPU software environment / 大型 GPU 软件环境 |
+| 1 | `pd-af3-gpu:v3.0.2` | archived / 已归档 |
+| 2 | `pd-rosetta-cpu-parallel:latest` | archived from April build / 已归档 4 月构建版本 |
+| 3 | `pd-bindcraft-gpu:installed` | archived / 已归档 |
+| 4 | `pd-pepmimic-gpu:latest` | archived / 已归档 |
+| 5 | `pd-rfpeptide-gpu:fixed` | archived / 已归档 |
+| 6 | `pd-foundry-gpu:latest` | not yet archived; rebuildable from tracked Docker context plus mounted checkpoints / 尚未归档，可由跟踪的 Docker 构建上下文和挂载 checkpoint 重建 |
 
 `pd-af2multimer-gpu` and `pd-af3-gpu` remain separate images and use separate
 database directories. AF3 does not use `data/alphafold_db`, and AF2 Multimer

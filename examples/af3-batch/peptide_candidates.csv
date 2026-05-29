@@ -1,0 +1,4 @@
+name,sequence,description
+example_peptide,GIGAVLKVLTTGLPALISWIKRKRQQ,Short peptide used for local AF3 validation
+linear_motif_variant_01,ACDEFGHIKLMNPQRSTVWY,Generic 20-aa teaching candidate
+basic_tail_variant_01,KKRKRQQGIGAVLKVLTTGL,Charge-rich teaching candidate

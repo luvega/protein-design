@@ -10,7 +10,7 @@ Docker-based local workbench for protein design workflows on this machine.
 Foundry/RFD3、BindCraft、AlphaFold Multimer、AlphaFold 3、Rosetta、PepMimic
 和 RFpeptide 等运行环境。
 
-Current version / 当前版本: `v0.3.1`
+Current version / 当前版本: `v0.4.0`
 
 Release notes / 版本说明: [CHANGELOG.md](CHANGELOG.md)
 
@@ -303,6 +303,12 @@ For the local AlphaFold 3 image, model file layout, and run commands, see
 本地 AlphaFold 3 镜像、权重文件位置和运行命令见
 [docs/af3-local-workflow.md](docs/af3-local-workflow.md)。
 
+For AF3 batch validation of peptide candidate tables, see
+[docs/af3-batch-validation.md](docs/af3-batch-validation.md).
+
+多肽候选表的 AF3 批量验证流程见
+[docs/af3-batch-validation.md](docs/af3-batch-validation.md)。
+
 For Docker image packaging, local archives, and restore commands, see
 [docs/docker-packaging.md](docs/docker-packaging.md).
 
@@ -439,6 +445,7 @@ Run workflow examples / 运行工作流示例:
 ./examples/foundry/run-mpnn-pdl1.sh
 ./examples/af2multimer/run-check-or-full.sh
 ./examples/af3/run-check-or-full.sh
+./examples/af3-batch/run-peptide-batch.sh
 ./examples/rosetta/run-relax-pdl1.sh
 ./examples/confidence/run-merge-srcr.sh
 ```
@@ -453,6 +460,18 @@ AF3 完整示例已于 2026-05-29 在本机验证：
 `RUN_FULL=1 ./examples/af3/run-check-or-full.sh` 将结果写入
 `data/outputs/examples/af3-example/example_peptide/`。在当前机械硬盘数据库布局下，
 MSA 阶段约 25 分钟，模型推理约 79 秒。
+
+Prepare AF3 JSON inputs from a peptide candidate table, preview batch commands,
+and summarize completed AF3 results / 从多肽候选表生成 AF3 JSON、预览批量命令并汇总
+已完成 AF3 结果:
+
+```bash
+./examples/af3-batch/run-peptide-batch.sh
+python3 scripts/summarize_af3_results.py \
+  --root-dir data/outputs/examples/af3-example \
+  --out-csv /tmp/af3-example-summary.csv \
+  --top 5
+```
 
 Merge confidence JSON files into ranked CSV/XLSX tables /
 合并置信度 JSON 并输出排序后的 CSV/XLSX 表:
