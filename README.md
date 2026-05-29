@@ -10,7 +10,7 @@ Docker-based local workbench for protein design workflows on this machine.
 Foundry/RFD3、BindCraft、AlphaFold Multimer、AlphaFold 3、Rosetta、PepMimic
 和 RFpeptide 等运行环境。
 
-Current version / 当前版本: `v0.2.0`
+Current version / 当前版本: `v0.3.0`
 
 Release notes / 版本说明: [CHANGELOG.md](CHANGELOG.md)
 
@@ -303,6 +303,12 @@ For the local AlphaFold 3 image, model file layout, and run commands, see
 本地 AlphaFold 3 镜像、权重文件位置和运行命令见
 [docs/af3-local-workflow.md](docs/af3-local-workflow.md)。
 
+For Docker image packaging, local archives, and restore commands, see
+[docs/docker-packaging.md](docs/docker-packaging.md).
+
+Docker 镜像封装、归档和恢复命令见
+[docs/docker-packaging.md](docs/docker-packaging.md)。
+
 Use `./scripts/fetch-af3-databases.sh start` to prepare AF3 databases with the
 official fetch script and project paths.
 
@@ -420,6 +426,13 @@ Run smoke checks / 运行烟测:
 ./scripts/smoke-test.sh all
 ```
 
+Export or restore the current AF3 image archive / 导出或恢复当前 AF3 镜像归档:
+
+```bash
+docker save -o releases/pd-af3-gpu_v3.0.2_20260529.tar pd-af3-gpu:v3.0.2
+docker load -i releases/pd-af3-gpu_v3.0.2_20260529.tar
+```
+
 Run workflow examples / 运行工作流示例:
 
 ```bash
@@ -463,6 +476,9 @@ python3 scripts/merge_confidence_tables.py \
   is mounted into the container at `/root/models/af3.bin.zst`. / AlphaFold 3
   权重文件位于 `data/alphafold3/models/af3.bin.zst`，容器内路径为
   `/root/models/af3.bin.zst`。
+- The AlphaFold 3 public databases are complete locally and stay outside the
+  image under `data/alphafold3/public_databases/`. / AlphaFold 3 公共数据库已在
+  本机完成准备，保留在镜像外的 `data/alphafold3/public_databases/` 下。
 - Do not commit local model files or workflow outputs. Check `git status`
   before every commit. / 不要提交本地模型文件或工作流输出；每次提交前检查
   `git status`。

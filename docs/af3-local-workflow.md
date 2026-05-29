@@ -46,6 +46,11 @@ The tracked build notes are in [images/pd-af3-gpu/README.md](../images/pd-af3-gp
 
 可进入 Git 的构建说明见 [images/pd-af3-gpu/README.md](../images/pd-af3-gpu/README.md)。
 
+Docker packaging, image archive, and restore instructions are tracked in
+[docker-packaging.md](docker-packaging.md).
+
+Docker 封装、镜像归档和恢复说明见 [docker-packaging.md](docker-packaging.md)。
+
 The build uses a local wheelhouse for the slow NVIDIA cuBLAS wheel:
 
 构建中使用本地 wheelhouse 加速较慢的 NVIDIA cuBLAS wheel：
@@ -125,6 +130,14 @@ The wrapper only handles process detaching, logging, and paths. Database
 versions and filenames still come from the official script.
 
 封装脚本只处理后台运行、日志和路径；数据库版本和文件名仍由官方脚本决定。
+
+Current local status on 2026-05-29: the official database fetch finished
+successfully. `data/alphafold3/public_databases/` uses about `627G`, and
+`mmcif_files/` contains `195859` files.
+
+2026-05-29 当前本机状态：官方数据库下载已经成功完成。
+`data/alphafold3/public_databases/` 约 `627G`，`mmcif_files/` 中有
+`195859` 个文件。
 
 If you want to run the official script directly in the foreground:
 

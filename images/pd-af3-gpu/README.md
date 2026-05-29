@@ -63,3 +63,43 @@ Runtime is managed by the `pd-af3-gpu` service in
 ```text
 data/alphafold3/models/af3.bin.zst
 ```
+
+The AF3 databases are mounted from:
+
+AF3 数据库挂载自：
+
+```text
+data/alphafold3/public_databases/
+```
+
+Neither the model file nor the public databases are baked into this image.
+
+权重文件和公共数据库都不打入该镜像。
+
+## Archive / 归档
+
+The local image archive created on 2026-05-29 is:
+
+2026-05-29 已生成本地镜像归档：
+
+```text
+releases/pd-af3-gpu_v3.0.2_20260529.tar
+```
+
+Checksum / 校验和:
+
+```text
+sha256 aed72560055a05a1d8c92610f882f9e36bde65a309004b8957850c91e5664fa1
+```
+
+Export and restore commands:
+
+导出和恢复命令：
+
+```bash
+docker save -o releases/pd-af3-gpu_v3.0.2_20260529.tar pd-af3-gpu:v3.0.2
+docker load -i releases/pd-af3-gpu_v3.0.2_20260529.tar
+```
+
+For the complete packaging policy, see
+[docs/docker-packaging.md](../../docs/docker-packaging.md).

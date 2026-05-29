@@ -4,6 +4,9 @@ This document maps each local Docker image to its build inputs, mounted runtime
 assets, and expected output locations. Large model, license, database, and
 workflow output files stay under `data/` and are not tracked by Git.
 
+For Docker packaging and local image archive instructions, see
+[docker-packaging.md](docker-packaging.md).
+
 For a reader-facing graphical summary, see the project-level visual abstract:
 
 ![Nature Methods-style protein design workflow graphical abstract](assets/nature-methods-workflow-graphical-abstract.png)

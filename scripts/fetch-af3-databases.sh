@@ -71,14 +71,37 @@ run_foreground() {
 }
 
 show_status() {
+  local saved_pid=""
   if [[ -f "$AF3_PID_FILE" ]]; then
-    echo "PID file: $AF3_PID_FILE ($(cat "$AF3_PID_FILE"))"
+    saved_pid="$(cat "$AF3_PID_FILE")"
+    if [[ -n "$saved_pid" ]] && kill -0 "$saved_pid" 2>/dev/null; then
+      echo "Process: running ($saved_pid)"
+    else
+      echo "Process: not running (stale PID file: $AF3_PID_FILE; saved PID: ${saved_pid:-empty})"
+    fi
   else
-    echo "PID file: $AF3_PID_FILE (missing)"
+    echo "Process: not running (PID file missing: $AF3_PID_FILE)"
   fi
 
-  pgrep -af 'fetch_databases|alphafold-databases|wget|zstd|tar --no-same-owner' || true
+  echo "Matching download processes:"
+  pgrep -af 'fetch_databases|alphafold-databases|wget|zstd|tar --no-same-owner' || echo "  none"
+
+  echo "Database size:"
   du -sh "$AF3_DB_DIR" 2>/dev/null || true
+
+  local latest_log=""
+  if [[ -d "$AF3_LOG_DIR" ]]; then
+    latest_log="$(
+      find "$AF3_LOG_DIR" -maxdepth 1 -type f -name 'af3-fetch-databases-*.log' -printf '%T@ %p\n' 2>/dev/null \
+        | sort -nr \
+        | head -n 1 \
+        | cut -d' ' -f2- || true
+    )"
+  fi
+  if [[ -n "$latest_log" ]]; then
+    echo "Latest log: $latest_log"
+    echo "Last log line: $(tail -n 1 "$latest_log")"
+  fi
 }
 
 follow_log() {
