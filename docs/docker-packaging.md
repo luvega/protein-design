@@ -10,18 +10,22 @@ connected to the large local assets in this workbench.
 
 Docker images should contain software environments, command-line tools,
 runtime libraries, and small reference files required by those tools. Large
-scientific assets stay on the host under `data/` and are mounted at runtime by
-`compose/docker-compose.yml`.
+scientific assets stay on the host and are mounted at runtime by
+`compose/docker-compose.yml`. AlphaFold 3 source, model weights, public
+databases, JAX cache, and the local AF3 image archive are kept together under
+`/mnt/ssd4t/protein-design`.
 
 Docker 镜像只封装软件环境、命令行工具、运行时库和必要的小型参考文件。大型科学数据
-保留在宿主机 `data/` 目录下，并由 `compose/docker-compose.yml` 在运行时挂载。
+保留在宿主机上，并由 `compose/docker-compose.yml` 在运行时挂载。AlphaFold 3 源码、
+权重、公共数据库、JAX 缓存和本地 AF3 镜像归档统一保存在
+`/mnt/ssd4t/protein-design` 下。
 
 This keeps images portable and rebuildable while avoiding multi-hundred-GB
-image layers. It also lets the project move to a future SSD by moving the whole
-project directory without changing Compose paths.
+image layers. AF3 runtime mounts use deterministic SSD absolute paths instead
+of symlinks.
 
-这样可以让镜像保持可迁移和可重建，同时避免出现数百 GB 的镜像层。后续加装 SSD 时，
-整体迁移项目目录即可保持 Compose 路径不变。
+这样可以让镜像保持可迁移和可重建，同时避免出现数百 GB 的镜像层。AF3 运行时挂载使用
+确定的 SSD 绝对路径，不使用软链接。
 
 ## Current AF3 Package / 当前 AF3 封装
 
@@ -38,7 +42,7 @@ The local archive created on 2026-05-29 is:
 2026-05-29 已生成本地归档：
 
 ```text
-releases/pd-af3-gpu_v3.0.2_20260529.tar
+/mnt/ssd4t/protein-design/releases/pd-af3-gpu_v3.0.2_20260529.tar
 ```
 
 Archive size and checksum:
@@ -63,17 +67,20 @@ AF3 使用以下宿主机挂载资产：
 
 | Host path / 宿主机路径 | Container path / 容器内路径 | In image? / 是否在镜像内 |
 | --- | --- | --- |
-| `data/alphafold3/models/af3.bin.zst` | `/root/models/af3.bin.zst` | no / 否 |
-| `data/alphafold3/public_databases/` | `/root/public_databases/` | no / 否 |
-| `data/alphafold3/jax_cache/` | `/data/alphafold3/jax_cache/` | no / 否 |
+| `/mnt/ssd4t/protein-design/data/alphafold3/models/af3.bin.zst` | `/root/models/af3.bin.zst` | no / 否 |
+| `/mnt/ssd4t/protein-design/data/alphafold3/public_databases/` | `/root/public_databases/` | no / 否 |
+| `/mnt/ssd4t/protein-design/data/alphafold3/jax_cache/` | `/data/alphafold3/jax_cache/` | no / 否 |
 | `data/inputs/` | `/data/inputs/` | no / 否 |
 | `data/outputs/` | `/data/outputs/` | no / 否 |
 
-The local AF3 database fetch has completed. The database directory currently
-uses about `627G`, and `mmcif_files/` contains `195859` files.
+The local AF3 database fetch has completed. Before SSD migration, the database
+directory used about `627G`, and `mmcif_files/` contained `195859` files. After
+migration, the database lives at
+`/mnt/ssd4t/protein-design/data/alphafold3/public_databases/`.
 
-本地 AF3 数据库下载已经完成。当前数据库目录约 `627G`，`mmcif_files/` 中有
-`195859` 个文件。
+本地 AF3 数据库下载已经完成。SSD 迁移前数据库目录约 `627G`，`mmcif_files/` 中有
+`195859` 个文件。迁移后数据库位于
+`/mnt/ssd4t/protein-design/data/alphafold3/public_databases/`。
 
 ## Export / 导出镜像
 
@@ -82,8 +89,8 @@ Use `docker save` to export a Docker image into `releases/`.
 使用 `docker save` 将 Docker 镜像导出到 `releases/`：
 
 ```bash
-docker save -o releases/pd-af3-gpu_v3.0.2_20260529.tar pd-af3-gpu:v3.0.2
-sha256sum releases/pd-af3-gpu_v3.0.2_20260529.tar
+docker save -o /mnt/ssd4t/protein-design/releases/pd-af3-gpu_v3.0.2_20260529.tar pd-af3-gpu:v3.0.2
+sha256sum /mnt/ssd4t/protein-design/releases/pd-af3-gpu_v3.0.2_20260529.tar
 ```
 
 Do not commit files under `releases/`; the directory is intentionally ignored
@@ -99,7 +106,7 @@ the image with:
 在本机清理后或另一台兼容 Linux 主机上，可用以下命令恢复镜像：
 
 ```bash
-docker load -i releases/pd-af3-gpu_v3.0.2_20260529.tar
+docker load -i /mnt/ssd4t/protein-design/releases/pd-af3-gpu_v3.0.2_20260529.tar
 docker image ls --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.Size}}' | grep pd-af3-gpu
 ```
 
@@ -176,13 +183,60 @@ Local validation on 2026-05-29 completed successfully and wrote:
 data/outputs/examples/af3-example/example_peptide/
 ```
 
-On the current HDD-backed database layout, the MSA stage took about `1506 s`
-and model inference took about `79 s`. This confirms that the archived image,
-mounted model file, mounted databases, and Compose service are connected
-correctly.
+Before SSD migration, the HDD-backed database layout gave an MSA stage of about
+`1506 s` and model inference of about `79 s`. After migration, the archived AF3
+image tar, source, model file, mounted databases, and JAX cache live together
+under `/mnt/ssd4t/protein-design`.
 
-在当前机械硬盘数据库布局下，MSA 阶段约 `1506 s`，模型推理约 `79 s`。这确认了已归档
-镜像、挂载权重、挂载数据库和 Compose 服务之间的连接是可用的。
+SSD 迁移前，在机械硬盘数据库布局下，MSA 阶段约 `1506 s`，模型推理约 `79 s`。迁移后
+AF3 镜像归档、源码、权重、挂载数据库和 JAX 缓存统一位于
+`/mnt/ssd4t/protein-design`。
+
+After moving Docker data-root to `/mnt/ssd4t/docker`, the same AF3 image and
+minimal example were validated again on 2026-06-18:
+
+Docker data-root 迁移到 `/mnt/ssd4t/docker` 后，2026-06-18 已再次验证同一 AF3 镜像和
+最小示例：
+
+```bash
+RUN_FULL=1 OUTPUT_DIR=/data/outputs/examples/af3-ssd-test-20260618 \
+  /usr/bin/time -p ./examples/af3/run-check-or-full.sh
+```
+
+| Stage / 阶段 | HDD baseline / 机械硬盘基线 | SSD run / SSD 后运行 |
+| --- | ---: | ---: |
+| Protein MSA search / 蛋白 MSA 检索 | about 1506 s / 约 1506 秒 | 554.46 s |
+| Template search / 模板检索 | about 2 s / 约 2 秒 | 1.70 s |
+| Model inference / 模型推理 | about 79 s / 约 79 秒 | 16.44 s |
+| End-to-end `real` time / 端到端 `real` 耗时 | not recorded / 未记录 | 593.62 s |
+
+The SSD output directory is
+`data/outputs/examples/af3-ssd-test-20260618/example_peptide/`; its
+`ranking_score` was `0.8828493945547446`, matching the earlier HDD-backed run.
+
+SSD 输出目录为 `data/outputs/examples/af3-ssd-test-20260618/example_peptide/`；
+`ranking_score` 为 `0.8828493945547446`，与之前机械硬盘布局下的运行一致。
+
+## Docker Data Root / Docker 存储根目录
+
+The AF3 image archive path above controls where the exported tar file lives. The
+Docker daemon stores runnable image layers under Docker Root Dir, which was
+`/var/lib/docker` before SSD migration. To guarantee runnable Docker image
+layers also live on the 4 TB SSD, run:
+
+上面的 AF3 镜像归档路径只决定导出的 tar 文件存放位置。Docker daemon 中可运行的镜像层
+由 Docker Root Dir 管理，SSD 迁移前为 `/var/lib/docker`。如果要保证可运行镜像层也在
+4TB SSD 上，运行：
+
+```bash
+sudo MIGRATE_DOCKER_ROOT=1 scripts/migrate-af3-to-ssd4t.sh
+```
+
+This changes Docker's global data-root to `/mnt/ssd4t/docker` and affects all
+local Docker images and containers.
+
+这会把 Docker 全局 data-root 改为 `/mnt/ssd4t/docker`，影响本机所有 Docker 镜像和
+容器。
 
 ## Archive Priority / 归档优先级
 
@@ -202,7 +256,8 @@ downloads first. The current priority is:
 
 `pd-af2multimer-gpu` and `pd-af3-gpu` remain separate images and use separate
 database directories. AF3 does not use `data/alphafold_db`, and AF2 Multimer
-does not use `data/alphafold3/`.
+does not use `/mnt/ssd4t/protein-design/data/alphafold3/`.
 
 `pd-af2multimer-gpu` 与 `pd-af3-gpu` 是独立镜像，并使用不同数据库目录。AF3 不使用
-`data/alphafold_db`，AF2 Multimer 不使用 `data/alphafold3/`。
+`data/alphafold_db`，AF2 Multimer 不使用
+`/mnt/ssd4t/protein-design/data/alphafold3/`。

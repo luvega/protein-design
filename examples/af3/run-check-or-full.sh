@@ -20,7 +20,7 @@ if [[ "${RUN_FULL:-0}" != "1" ]]; then
     test -f /alphafold3_venv/lib/python3.12/site-packages/alphafold3/constants/converters/ccd.pickle
     python -c "import jax, alphafold3; print(\"jax\", jax.__version__); print(\"devices\", jax.devices()); print(\"alphafold3 ok\")"
   '
-  echo "Set RUN_FULL=1 to run AlphaFold 3. Full runs require databases under data/alphafold3/public_databases."
+  echo "Set RUN_FULL=1 to run AlphaFold 3. Full runs require databases under /mnt/ssd4t/protein-design/data/alphafold3/public_databases."
   exit 0
 fi
 

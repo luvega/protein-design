@@ -45,20 +45,23 @@ OUTPUT_DIR=/data/outputs/my_project/mpnn_run_001 \
 ./examples/foundry/run-mpnn-pdl1.sh
 ```
 
-The `/data/...` paths are paths inside the container. They map to this
-repository's `data/...` directories on the host.
+The `/data/...` paths are paths inside the container. Common input/output paths
+map to this repository's `data/...` directories on the host. AlphaFold 3 model,
+database, and cache paths map directly to `/mnt/ssd4t/protein-design`.
 
-`/data/...` 是容器内路径，对应宿主机本仓库里的 `data/...` 目录。
+`/data/...` 是容器内路径。常规输入输出路径对应宿主机本仓库里的 `data/...` 目录；
+AlphaFold 3 权重、数据库和缓存路径直接对应 `/mnt/ssd4t/protein-design`。
 
 AlphaFold 3 uses a separate image and asset layout from AlphaFold 2 Multimer.
-Its model file is mounted from `data/alphafold3/models/af3.bin.zst` to
+Its model file is mounted from
+`/mnt/ssd4t/protein-design/data/alphafold3/models/af3.bin.zst` to
 `/root/models/af3.bin.zst`, and databases should be placed under
-`data/alphafold3/public_databases`.
+`/mnt/ssd4t/protein-design/data/alphafold3/public_databases`.
 
 AlphaFold 3 与 AlphaFold 2 Multimer 使用不同镜像和资源目录。AF3 权重文件从
-`data/alphafold3/models/af3.bin.zst` 挂载到容器内
+`/mnt/ssd4t/protein-design/data/alphafold3/models/af3.bin.zst` 挂载到容器内
 `/root/models/af3.bin.zst`，数据库放在
-`data/alphafold3/public_databases`。
+`/mnt/ssd4t/protein-design/data/alphafold3/public_databases`。
 
 AF3 batch validation starts from a CSV table:
 

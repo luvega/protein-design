@@ -2,8 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-AF3_SRC="${AF3_SRC:-$ROOT_DIR/data/src/alphafold3}"
-AF3_DB_DIR="${AF3_DB_DIR:-$ROOT_DIR/data/alphafold3/public_databases}"
+AF3_SSD_ROOT="${AF3_SSD_ROOT:-/mnt/ssd4t/protein-design}"
+AF3_SRC="${AF3_SRC:-$AF3_SSD_ROOT/data/src/alphafold3}"
+AF3_DB_DIR="${AF3_DB_DIR:-$AF3_SSD_ROOT/data/alphafold3/public_databases}"
 AF3_LOG_DIR="${AF3_LOG_DIR:-$ROOT_DIR/data/outputs/logs}"
 AF3_LOG_FILE="${AF3_LOG_FILE:-$AF3_LOG_DIR/af3-fetch-databases-$(date +%Y%m%d).log}"
 AF3_PID_FILE="${AF3_PID_FILE:-$AF3_LOG_DIR/af3-fetch-databases.pid}"
@@ -20,6 +21,7 @@ Commands:
   log         Follow the download log.
 
 Environment:
+  AF3_SSD_ROOT   SSD root for AlphaFold 3 source and data.
   AF3_SRC        Official AlphaFold 3 source checkout.
   AF3_DB_DIR     Target public_databases directory.
   AF3_LOG_FILE   Log file for background runs.
@@ -31,7 +33,7 @@ USAGE
 ensure_official_script() {
   if [[ ! -x "$AF3_SRC/fetch_databases.sh" ]]; then
     echo "Missing executable official script: $AF3_SRC/fetch_databases.sh" >&2
-    echo "Clone AlphaFold 3 into data/src/alphafold3 and run chmod +x fetch_databases.sh." >&2
+    echo "Clone AlphaFold 3 into /mnt/ssd4t/protein-design/data/src/alphafold3 and run chmod +x fetch_databases.sh." >&2
     exit 1
   fi
 }

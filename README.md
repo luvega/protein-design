@@ -10,15 +10,17 @@ Docker-based local workbench for protein design workflows on this machine.
 Foundry/RFD3、BindCraft、AlphaFold Multimer、AlphaFold 3、Rosetta、PepMimic
 和 RFpeptide 等运行环境。
 
-Current version / 当前版本: `v0.4.0`
+Current version / 当前版本: `v0.4.1-dev`
 
 Release notes / 版本说明: [CHANGELOG.md](CHANGELOG.md)
 
 This repository tracks only lightweight engineering assets. Large local assets
-stay outside Git under `data/` and `releases/`.
+stay outside Git. AlphaFold 3 source, model weights, public databases, JAX
+cache, and the local image archive are kept together on the SSD mounted at
+`/mnt/ssd4t`.
 
-本仓库只跟踪轻量工程文件。模型权重、数据库、设计输出和镜像归档等大文件保留在
-`data/` 和 `releases/` 下，不进入 Git。
+本仓库只跟踪轻量工程文件。大型本地资产不进入 Git。AlphaFold 3 源码、权重、公共
+数据库、JAX 缓存和本地镜像归档统一保存在挂载到 `/mnt/ssd4t` 的 SSD 上。
 
 ## Repository Policy / 仓库策略
 
@@ -48,15 +50,17 @@ Not tracked in Git / Git 不跟踪内容:
 | `data/inputs/` | input structures and workflow configuration / 输入结构和流程配置 |
 | `data/outputs/` | generated workflow outputs / 生成的设计结果 |
 | `data/alphafold_db/` | AlphaFold 2 Multimer parameter/database assets / AlphaFold 2 Multimer 参数和数据库 |
-| `data/alphafold3/models/` | AlphaFold 3 model file, including `af3.bin.zst` / AlphaFold 3 权重文件 |
-| `data/alphafold3/public_databases/` | AlphaFold 3 sequence/template databases / AlphaFold 3 序列和模板数据库 |
-| `data/alphafold3/jax_cache/` | AlphaFold 3 JAX compilation cache / AlphaFold 3 JAX 编译缓存 |
+| `/mnt/ssd4t/protein-design/data/alphafold3/models/` | AlphaFold 3 model file, including `af3.bin.zst` / AlphaFold 3 权重文件 |
+| `/mnt/ssd4t/protein-design/data/alphafold3/public_databases/` | AlphaFold 3 sequence/template databases / AlphaFold 3 序列和模板数据库 |
+| `/mnt/ssd4t/protein-design/data/alphafold3/jax_cache/` | AlphaFold 3 JAX compilation cache / AlphaFold 3 JAX 编译缓存 |
+| `/mnt/ssd4t/protein-design/data/src/alphafold3/` | AlphaFold 3 source and Docker build context / AlphaFold 3 源码和 Docker 构建上下文 |
 | `data/bindcraft_models/` | BindCraft model parameters / BindCraft 模型参数 |
 | `data/foundry_checkpoints/` | Foundry/ProteinMPNN/LigandMPNN checkpoints / Foundry、ProteinMPNN、LigandMPNN 检查点 |
 | `data/pepmimic_checkpoints/` | PepMimic checkpoints / PepMimic 检查点 |
 | `data/rfpeptide_models/` | RFpeptide/RFdiffusion checkpoints / RFpeptide、RFdiffusion 检查点 |
 | `data/rosetta_db` | symlink to the local Rosetta database / 指向本地 Rosetta 数据库的软链接 |
-| `releases/` | exported local image bundles / 导出的本地镜像包 |
+| `/mnt/ssd4t/protein-design/releases/` | SSD-backed AF3 image archive / SSD 上的 AF3 镜像归档 |
+| `releases/` | exported local image bundles for non-AF3 services / 非 AF3 服务的本地镜像包 |
 
 ## Workflow Overview / 工作流概览
 
@@ -384,7 +388,7 @@ Service-specific mounts / 服务专属挂载:
 | `pd-foundry-gpu` | `data/foundry_checkpoints` |
 | `pd-bindcraft-gpu` | `data/bindcraft_models`, `data/licenses` |
 | `pd-af2multimer-gpu` | `data/alphafold_db` |
-| `pd-af3-gpu` | `data/alphafold3/models`, `data/alphafold3/public_databases`, `data/alphafold3/jax_cache` |
+| `pd-af3-gpu` | `/mnt/ssd4t/protein-design/data/alphafold3/models`, `/mnt/ssd4t/protein-design/data/alphafold3/public_databases`, `/mnt/ssd4t/protein-design/data/alphafold3/jax_cache` |
 | `pd-rosetta-cpu-parallel` | `data/rosetta_db`, `data/licenses` |
 | `pd-pepmimic-gpu` | `data/pepmimic_checkpoints`, `data/licenses` |
 | `pd-rfpeptide-gpu` | `data/rfpeptide_models` |
@@ -397,6 +401,35 @@ Validate Compose configuration / 验证 Compose 配置:
 docker compose -f compose/docker-compose.yml config --quiet
 ```
 
+Prepare the new 4 TB SSD and move AF3 assets / 准备新 4TB SSD 并移动 AF3 资产:
+
+```bash
+sudo scripts/migrate-af3-to-ssd4t.sh
+```
+
+This clears `/dev/nvme1n1`, mounts it at `/mnt/ssd4t`, and moves the AF3 source,
+model weights, public databases, JAX cache, and image archive to
+`/mnt/ssd4t/protein-design`. It does not create symlinks.
+
+该脚本会清空 `/dev/nvme1n1`，挂载到 `/mnt/ssd4t`，并把 AF3 源码、权重、公共数据库、
+JAX 缓存和镜像归档移动到 `/mnt/ssd4t/protein-design`，不创建软链接。
+
+If the Docker daemon image layers must also live on the same SSD, run the same
+script with the explicit Docker data-root migration flag:
+
+如果 Docker daemon 中真正运行的镜像层也必须位于同一块 SSD，需要显式迁移 Docker
+data-root：
+
+```bash
+sudo MIGRATE_DOCKER_ROOT=1 scripts/migrate-af3-to-ssd4t.sh
+```
+
+That changes Docker's global storage location to `/mnt/ssd4t/docker`, affecting
+all local Docker images and containers.
+
+这会把 Docker 的全局存储位置改为 `/mnt/ssd4t/docker`，影响本机所有 Docker 镜像和
+容器。
+
 Check host GPU / 检查宿主机 GPU:
 
 ```bash
@@ -408,7 +441,9 @@ Build or refresh a service image / 构建或刷新服务镜像:
 ```bash
 docker compose -f compose/docker-compose.yml --profile foundry build pd-foundry-gpu
 docker compose -f compose/docker-compose.yml --profile af2 build pd-af2multimer-gpu
-docker build -t pd-af3-gpu:v3.0.2 -f data/src/alphafold3/docker/Dockerfile data/src/alphafold3
+docker build -t pd-af3-gpu:v3.0.2 \
+  -f /mnt/ssd4t/protein-design/data/src/alphafold3/docker/Dockerfile \
+  /mnt/ssd4t/protein-design/data/src/alphafold3
 docker compose -f compose/docker-compose.yml --profile rosetta build pd-rosetta-cpu-parallel
 docker compose -f compose/docker-compose.yml --profile pepmimic build pd-pepmimic-gpu
 docker compose -f compose/docker-compose.yml --profile rfpeptide build pd-rfpeptide-gpu
@@ -435,8 +470,8 @@ Run smoke checks / 运行烟测:
 Export or restore the current AF3 image archive / 导出或恢复当前 AF3 镜像归档:
 
 ```bash
-docker save -o releases/pd-af3-gpu_v3.0.2_20260529.tar pd-af3-gpu:v3.0.2
-docker load -i releases/pd-af3-gpu_v3.0.2_20260529.tar
+docker save -o /mnt/ssd4t/protein-design/releases/pd-af3-gpu_v3.0.2_20260529.tar pd-af3-gpu:v3.0.2
+docker load -i /mnt/ssd4t/protein-design/releases/pd-af3-gpu_v3.0.2_20260529.tar
 ```
 
 Run workflow examples / 运行工作流示例:
@@ -452,14 +487,39 @@ Run workflow examples / 运行工作流示例:
 
 The full AF3 example was verified locally on 2026-05-29:
 `RUN_FULL=1 ./examples/af3/run-check-or-full.sh` wrote results to
-`data/outputs/examples/af3-example/example_peptide/`. On the current HDD-backed
-database layout, the MSA stage took about 25 minutes and model inference took
-about 79 seconds.
+`data/outputs/examples/af3-example/example_peptide/`. Before the SSD migration,
+the HDD-backed database layout gave an MSA stage of about 25 minutes and model
+inference of about 79 seconds. After migration, AF3 reads the model, databases,
+source, and archive from `/mnt/ssd4t/protein-design`.
 
 AF3 完整示例已于 2026-05-29 在本机验证：
 `RUN_FULL=1 ./examples/af3/run-check-or-full.sh` 将结果写入
-`data/outputs/examples/af3-example/example_peptide/`。在当前机械硬盘数据库布局下，
-MSA 阶段约 25 分钟，模型推理约 79 秒。
+`data/outputs/examples/af3-example/example_peptide/`。SSD 迁移前，在机械硬盘数据库
+布局下 MSA 阶段约 25 分钟，模型推理约 79 秒。迁移后 AF3 的权重、数据库、源码和
+归档都来自 `/mnt/ssd4t/protein-design`。
+
+The same minimal AF3 example was rerun after the SSD migration on 2026-06-18:
+
+SSD 迁移后，2026-06-18 已重新运行同一个 AF3 最小示例：
+
+```bash
+RUN_FULL=1 OUTPUT_DIR=/data/outputs/examples/af3-ssd-test-20260618 \
+  /usr/bin/time -p ./examples/af3/run-check-or-full.sh
+```
+
+| Stage / 阶段 | HDD baseline / 机械硬盘基线 | SSD run / SSD 后本次运行 |
+| --- | ---: | ---: |
+| Protein MSA search / 蛋白 MSA 检索 | about 1506 s / 约 1506 秒 | 554.46 s |
+| Template search / 模板检索 | about 2 s / 约 2 秒 | 1.70 s |
+| Model inference / 模型推理 | about 79 s / 约 79 秒 | 16.44 s |
+| End-to-end `real` time / 端到端 `real` 耗时 | not recorded / 未记录 | 593.62 s |
+
+The SSD output was written to
+`data/outputs/examples/af3-ssd-test-20260618/example_peptide/`. Its
+`ranking_score` was `0.8828493945547446`, matching the earlier HDD-backed run.
+
+SSD 输出目录为 `data/outputs/examples/af3-ssd-test-20260618/example_peptide/`。
+本次 `ranking_score` 为 `0.8828493945547446`，与之前机械硬盘布局下的结果一致。
 
 Prepare AF3 JSON inputs from a peptide candidate table, preview batch commands,
 and summarize completed AF3 results / 从多肽候选表生成 AF3 JSON、预览批量命令并汇总
@@ -502,13 +562,20 @@ python3 scripts/merge_confidence_tables.py \
   the AlphaFold 2 Multimer image or `data/alphafold_db`. / AlphaFold 3 使用独立
   的 `pd-af3-gpu:v3.0.2` 镜像，不使用 AlphaFold 2 Multimer 镜像或
   `data/alphafold_db`。
-- The AlphaFold 3 model file lives at `data/alphafold3/models/af3.bin.zst` and
-  is mounted into the container at `/root/models/af3.bin.zst`. / AlphaFold 3
-  权重文件位于 `data/alphafold3/models/af3.bin.zst`，容器内路径为
+- The AlphaFold 3 model file lives at
+  `/mnt/ssd4t/protein-design/data/alphafold3/models/af3.bin.zst` and is mounted
+  into the container at `/root/models/af3.bin.zst`. / AlphaFold 3 权重文件位于
+  `/mnt/ssd4t/protein-design/data/alphafold3/models/af3.bin.zst`，容器内路径为
   `/root/models/af3.bin.zst`。
 - The AlphaFold 3 public databases are complete locally and stay outside the
-  image under `data/alphafold3/public_databases/`. / AlphaFold 3 公共数据库已在
-  本机完成准备，保留在镜像外的 `data/alphafold3/public_databases/` 下。
+  image under `/mnt/ssd4t/protein-design/data/alphafold3/public_databases/`. /
+  AlphaFold 3 公共数据库已在本机完成准备，保留在镜像外的
+  `/mnt/ssd4t/protein-design/data/alphafold3/public_databases/` 下。
+- The AF3 source/build context and AF3 image archive are also SSD-backed under
+  `/mnt/ssd4t/protein-design/data/src/alphafold3/` and
+  `/mnt/ssd4t/protein-design/releases/`. / AF3 源码/构建上下文和 AF3 镜像归档同样位于
+  `/mnt/ssd4t/protein-design/data/src/alphafold3/` 和
+  `/mnt/ssd4t/protein-design/releases/`。
 - Do not commit local model files or workflow outputs. Check `git status`
   before every commit. / 不要提交本地模型文件或工作流输出；每次提交前检查
   `git status`。

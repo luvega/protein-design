@@ -2,7 +2,32 @@
 
 ## Unreleased
 
-No unreleased changes.
+### Added
+
+- Added `scripts/migrate-af3-to-ssd4t.sh` to clear `/dev/nvme1n1`, mount the new
+  SSD at `/mnt/ssd4t`, and move AF3 source, model weights, public databases,
+  JAX cache, and the AF3 image archive under `/mnt/ssd4t/protein-design`.
+- Added an explicit `MIGRATE_DOCKER_ROOT=1` path for moving Docker's global
+  data-root to `/mnt/ssd4t/docker` when runnable Docker image layers must also
+  live on the 4 TB SSD.
+
+### Changed
+
+- Updated AF3 Compose mounts, database-fetch defaults, README, image notes, and
+  user docs to use deterministic `/mnt/ssd4t/protein-design` paths with no AF3
+  symlinks.
+
+### Verified
+
+- `./scripts/smoke-test.sh af3`
+- `RUN_FULL=1 OUTPUT_DIR=/data/outputs/examples/af3-ssd-test-20260618 /usr/bin/time -p ./examples/af3/run-check-or-full.sh`
+- SSD-backed AF3 rerun on 2026-06-18 wrote
+  `data/outputs/examples/af3-ssd-test-20260618/example_peptide/`.
+- The SSD-backed run reduced the minimal example MSA stage from the previous
+  HDD baseline of about `1506 s` to `554.46 s`, and model inference from about
+  `79 s` to `16.44 s`.
+- The SSD-backed run preserved the example `ranking_score`
+  `0.8828493945547446`.
 
 ## v0.4.0 - 2026-05-29
 

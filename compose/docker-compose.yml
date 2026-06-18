@@ -105,9 +105,9 @@ services:
     volumes:
       - ../data/inputs:/data/inputs
       - ../data/outputs:/data/outputs
-      - ../data/alphafold3/models:/root/models:ro
-      - ../data/alphafold3/public_databases:/root/public_databases:ro
-      - ../data/alphafold3/jax_cache:/data/alphafold3/jax_cache
+      - /mnt/ssd4t/protein-design/data/alphafold3/models:/root/models:ro
+      - /mnt/ssd4t/protein-design/data/alphafold3/public_databases:/root/public_databases:ro
+      - /mnt/ssd4t/protein-design/data/alphafold3/jax_cache:/data/alphafold3/jax_cache
       - ../scripts:/workspace/scripts
       - ../examples:/workspace/examples:ro
     tty: true

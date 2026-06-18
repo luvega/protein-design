@@ -100,11 +100,14 @@ To test only the first candidate:
 BATCH_LIMIT=1 RUN_FULL=1 ./examples/af3-batch/run-peptide-batch.sh
 ```
 
-The current database is on HDD, so the MSA stage can dominate runtime. This is
-expected and will be revisited after SSD migration.
+The AF3 database is SSD-backed under
+`/mnt/ssd4t/protein-design/data/alphafold3/public_databases/`. MSA search can
+still dominate runtime for some inputs, but database I/O should no longer come
+from the HDD.
 
-当前 AF3 数据库位于机械硬盘，MSA 检索可能是主要耗时来源。这是预期现象，SSD 到位后
-再做性能优化。
+当前 AF3 数据库位于
+`/mnt/ssd4t/protein-design/data/alphafold3/public_databases/`。部分输入中 MSA 检索
+仍可能是主要耗时来源，但数据库 I/O 不再来自机械硬盘。
 
 ## Step 4: Summarize AF3 Outputs / 第四步：汇总 AF3 输出
 

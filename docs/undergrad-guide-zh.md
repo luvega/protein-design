@@ -41,9 +41,10 @@ README 的 `Method-Level Information Flow` 和 `Per-Image Workflow Figures`
 | `data/inputs/` | 输入结构、FASTA、JSON 配置等。 |
 | `data/outputs/` | 运行结果、结构文件、打分表等。 |
 | `data/*_models`、`data/*_checkpoints` | 模型参数和 checkpoint。不要随意移动。 |
-| `data/alphafold3/models/` | AlphaFold 3 权重文件目录，当前应包含 `af3.bin.zst`。 |
-| `data/alphafold3/public_databases/` | AlphaFold 3 数据库目录。完整运行 AF3 前需要准备。 |
-| `data/alphafold3/jax_cache/` | AlphaFold 3 的 JAX 编译缓存目录。 |
+| `/mnt/ssd4t/protein-design/data/alphafold3/models/` | AlphaFold 3 权重文件目录，当前应包含 `af3.bin.zst`。 |
+| `/mnt/ssd4t/protein-design/data/alphafold3/public_databases/` | AlphaFold 3 数据库目录。完整运行 AF3 前需要准备。 |
+| `/mnt/ssd4t/protein-design/data/alphafold3/jax_cache/` | AlphaFold 3 的 JAX 编译缓存目录。 |
+| `/mnt/ssd4t/protein-design/data/src/alphafold3/` | AlphaFold 3 源码和 Docker 构建上下文。 |
 | `.Trash/` | 本工作区的回收站。清理文件时先移动到这里，不直接删除。 |
 
 `data/` 下大多数内容不进入 Git，因为模型和输出文件通常很大。不要用 Git 管理实验结果，除非明确知道自己在做什么。
@@ -518,14 +519,16 @@ RUN_FULL=1 ./examples/af2multimer/run-check-or-full.sh
 ./examples/af3/run-check-or-full.sh
 ```
 
-完整预测前需要先准备 AF3 数据库。当前数据库目录放在机械硬盘上的项目目录中：
+完整预测前需要先准备 AF3 数据库。AF3 源码、权重、数据库、JAX 缓存和本地镜像归档统一放在
+SSD 上：
 
 ```text
-data/alphafold3/public_databases/
+/mnt/ssd4t/protein-design/data/alphafold3/public_databases/
 ```
 
 本项目的准备脚本会调用官方 AlphaFold 3 源码中的
-`data/src/alphafold3/fetch_databases.sh`，只是额外处理后台运行、日志和路径：
+`/mnt/ssd4t/protein-design/data/src/alphafold3/fetch_databases.sh`，只是额外处理后台运行、
+日志和路径：
 
 ```bash
 ./scripts/fetch-af3-databases.sh start
@@ -535,18 +538,48 @@ data/alphafold3/public_databases/
 
 ```bash
 ./scripts/fetch-af3-databases.sh status
-du -sh data/alphafold3/public_databases
+du -sh /mnt/ssd4t/protein-design/data/alphafold3/public_databases
 tail -f data/outputs/logs/af3-fetch-databases-*.log
 ```
 
-如果之后加装 SSD，建议把整个 `/data/protein-design` 项目目录整体迁移到 SSD，
-不要只移动数据库目录。这样 `compose/docker-compose.yml` 里的相对挂载路径仍然有效。
+本机 SSD 迁移脚本为：
+
+```bash
+sudo scripts/migrate-af3-to-ssd4t.sh
+```
+
+该脚本不创建软链接。迁移完成后，`compose/docker-compose.yml` 直接挂载
+`/mnt/ssd4t/protein-design` 下的 AF3 路径。
 
 完整运行需要设置：
 
 ```bash
 RUN_FULL=1 ./examples/af3/run-check-or-full.sh
 ```
+
+SSD 迁移后，已在 2026-06-18 重新运行最小 AF3 示例：
+
+```bash
+RUN_FULL=1 OUTPUT_DIR=/data/outputs/examples/af3-ssd-test-20260618 \
+  /usr/bin/time -p ./examples/af3/run-check-or-full.sh
+```
+
+输出目录：
+
+```text
+data/outputs/examples/af3-ssd-test-20260618/example_peptide/
+```
+
+与之前机械硬盘布局下的历史基线相比：
+
+| 阶段 | 机械硬盘基线 | SSD 后本次运行 |
+| --- | ---: | ---: |
+| 蛋白 MSA 检索 | 约 1506 秒 | 554.46 秒 |
+| 模板检索 | 约 2 秒 | 1.70 秒 |
+| 模型推理 | 约 79 秒 | 16.44 秒 |
+| 端到端 `real` 耗时 | 未记录 | 593.62 秒 |
+
+本次 `ranking_score` 为 `0.8828493945547446`，与之前示例运行一致。
 
 默认变量：
 
@@ -566,7 +599,7 @@ RUN_FULL=1 ./examples/af3/run-check-or-full.sh
 | --- | --- |
 | `--json_path` | 输入 JSON，AF3 不使用 AF2 的多链 FASTA 入口。 |
 | `--model_dir` | 权重目录，当前容器内为 `/root/models`，其中包含 `af3.bin.zst`。 |
-| `--db_dir` | AF3 数据库目录，来自宿主机 `data/alphafold3/public_databases`。 |
+| `--db_dir` | AF3 数据库目录，来自宿主机 `/mnt/ssd4t/protein-design/data/alphafold3/public_databases`。 |
 | `--output_dir` | 输出目录。 |
 | `--jax_compilation_cache_dir` | JAX 编译缓存，重复运行相似长度输入时可减少编译时间。 |
 | `--num_diffusion_samples` | 生成结构样本数。越大越慢。 |
@@ -576,7 +609,8 @@ AF3 与 AF2 Multimer 是两个独立服务：
 
 - AF3 镜像是 `pd-af3-gpu:v3.0.2`。
 - AF2 Multimer 镜像是 `pd-af2multimer-gpu:fixed`。
-- AF3 使用 `data/alphafold3/models/af3.bin.zst` 和 `data/alphafold3/public_databases`。
+- AF3 使用 `/mnt/ssd4t/protein-design/data/alphafold3/models/af3.bin.zst` 和
+  `/mnt/ssd4t/protein-design/data/alphafold3/public_databases`。
 - AF2 Multimer 使用 `data/alphafold_db`。
 - 不要把 AF3 权重放进 AF2 目录，也不要把 AF2 数据库当作 AF3 数据库使用。
 
@@ -631,7 +665,8 @@ BATCH_LIMIT=1 RUN_FULL=1 ./examples/af3-batch/run-peptide-batch.sh
 ```
 
 `BATCH_LIMIT=1` 表示先只跑第一条，适合测试路径和数据库是否正常。确认无误后可以去掉
-`BATCH_LIMIT`，但要注意 AF3 会扫描大型数据库，当前机械硬盘上耗时较长。
+`BATCH_LIMIT`。AF3 仍会扫描大型数据库，但数据库 I/O 来自
+`/mnt/ssd4t/protein-design/data/alphafold3/public_databases`，不再来自机械硬盘。
 
 如果已经有 AF3 输出，可以单独汇总：
 
@@ -812,7 +847,8 @@ ls data/inputs
 ### 12.3 找不到模型权重
 
 例如缺少 `.pt`、`.ckpt`、`.npz` 或 AF3 的 `af3.bin.zst`。这些文件在
-`data/*_models`、`data/*_checkpoints` 或 `data/alphafold3/models` 下，不进入
+`data/*_models`、`data/*_checkpoints` 或
+`/mnt/ssd4t/protein-design/data/alphafold3/models` 下，不进入
 Git。不要从 README 复制路径后随意改名。
 
 ### 12.4 GPU 不可用
